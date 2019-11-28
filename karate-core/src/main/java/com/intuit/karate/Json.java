@@ -85,6 +85,14 @@ public class Json {
         set(path, temp);
         return this;
     }
+    
+    public Match getMatcher(String path) {
+        return Match.init(get(path));
+    }
+    
+    public Json getJson(String path) {
+        return new Json(get(path));
+    }    
 
     public Object get(String path) {
         return doc.read(prefix(path));
@@ -92,8 +100,32 @@ public class Json {
 
     public <T> T get(String path, Class<T> clazz) {
         return doc.read(prefix(path), clazz);
+    }        
+    
+    public String getString(String path) {
+        return get(path, String.class);
+    }  
+    
+    public List getList(String path) {
+        return get(path, List.class);
+    }    
+    
+    public Map getMap(String path) {
+        return get(path, Map.class);
     }
 
+    public Number getNumber(String path) {
+        return get(path, Number.class);
+    }    
+
+    public Integer getInteger(String path) {
+        return get(path, Integer.class);
+    }  
+    
+    public Boolean getBoolean(String path) {
+        return get(path, Boolean.class);
+    }     
+    
     @Override
     public String toString() {
         return doc.jsonString();
@@ -103,6 +135,10 @@ public class Json {
         return array;
     }
 
+    public Object asMapOrList() {
+        return doc.read("$");
+    }    
+    
     public Map<String, Object> asMap() {
         return doc.read("$");
     }

@@ -39,6 +39,7 @@ import com.intuit.karate.http.MultiValuedMap;
 import java.io.IOException;
 
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
@@ -146,17 +147,30 @@ public class ApacheHttpClient extends HttpClient<HttpEntity> {
                     builder = builder.loadKeyMaterial(keyStore, keyPassword);
                 }
                 sslContext = builder.build();
+                SSLConnectionSocketFactory socketFactory;
+                if (keyStore != null) {
+                    socketFactory = new SSLConnectionSocketFactory(sslContext, new NoopHostnameVerifier());
+                } else {
+                    socketFactory = new LenientSslConnectionSocketFactory(sslContext, new NoopHostnameVerifier());
+                }
+                clientBuilder.setSSLSocketFactory(socketFactory);
             } catch (Exception e) {
                 context.logger.error("ssl context init failed: {}", e.getMessage());
                 throw new RuntimeException(e);
             }
-            SSLConnectionSocketFactory socketFactory = new LenientSslConnectionSocketFactory(sslContext, new NoopHostnameVerifier());
-            clientBuilder.setSSLSocketFactory(socketFactory);
         }
         RequestConfig.Builder configBuilder = RequestConfig.custom()
                 .setCookieSpec(LenientCookieSpec.KARATE)
                 .setConnectTimeout(config.getConnectTimeout())
                 .setSocketTimeout(config.getReadTimeout());
+        if (config.getLocalAddress() != null) {
+            try {
+                InetAddress localAddress = InetAddress.getByName(config.getLocalAddress());
+                configBuilder.setLocalAddress(localAddress);
+            } catch (Exception e) {
+                context.logger.warn("failed to resolve local address: {} - {}", config.getLocalAddress(), e.getMessage());
+            }
+        }
         clientBuilder.setDefaultRequestConfig(configBuilder.build());
         SocketConfig.Builder socketBuilder = SocketConfig.custom().setSoTimeout(config.getConnectTimeout());
         clientBuilder.setDefaultSocketConfig(socketBuilder.build());
@@ -174,12 +188,14 @@ public class ApacheHttpClient extends HttpClient<HttpEntity> {
                 if (config.getNonProxyHosts() != null) {
                     ProxySelector proxySelector = new ProxySelector() {
                         private final List<String> proxyExceptions = config.getNonProxyHosts();
+
                         @Override
                         public List<Proxy> select(URI uri) {
-                            return Collections.singletonList(proxyExceptions.contains(uri.getHost()) 
-                                    ? Proxy.NO_PROXY 
+                            return Collections.singletonList(proxyExceptions.contains(uri.getHost())
+                                    ? Proxy.NO_PROXY
                                     : new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyUri.getHost(), proxyUri.getPort())));
                         }
+
                         @Override
                         public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
                             context.logger.info("connect failed to uri: {}", uri, ioe);
@@ -206,6 +222,9 @@ public class ApacheHttpClient extends HttpClient<HttpEntity> {
     @Override
     protected void buildPath(String path) {
         String temp = uriBuilder.getPath();
+        if (temp == null) {
+            temp = "";
+        }
         if (!temp.endsWith("/")) {
             temp = temp + "/";
         }

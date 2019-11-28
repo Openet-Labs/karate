@@ -23,10 +23,13 @@
  */
 package com.intuit.karate;
 
+import com.intuit.karate.core.ScenarioContext;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,17 +44,45 @@ public class Resource {
 
     private final boolean file;
     private final Path path;
+    private final int line;
     private final String relativePath;
     private final String packageQualifiedName;
-    
-    public static final Resource EMPTY = new Resource(Paths.get(""), "");
+
+    public static final Resource EMPTY = new Resource(Paths.get(""), "", -1);
 
     public Resource(File file, String relativePath) {
-        this(file.toPath(), relativePath);
+        this(file.toPath(), relativePath, -1);
     }
 
-    public Resource(Path path, String relativePath) {
+    public Resource(Path path, String relativePath, int line) {
         this.path = path;
+        this.line = line;
+        file = !path.toUri().getScheme().equals("jar");
+        if (relativePath == null) {
+            this.relativePath = FileUtils.toRelativeClassPath(path, Thread.currentThread().getContextClassLoader());
+        } else {
+            this.relativePath = relativePath;
+        }
+        packageQualifiedName = FileUtils.toPackageQualifiedName(this.relativePath);
+    }
+
+    public Resource(URL url) {
+        this(FileUtils.urlToPath(url, null));
+    }
+
+    public Resource(Path path) {
+        this(path, null, -1);
+    }
+
+    public Resource(ScenarioContext sc, String relativePath) {
+        String strippedPath = FileUtils.removePrefix(relativePath);
+        URL url = sc.getResource(strippedPath);
+        if (url != null) {
+            this.path = FileUtils.urlToPath(url, strippedPath);
+        } else {
+            this.path = new File(strippedPath).toPath();
+        }
+        this.line = -1;
         file = !path.toUri().getScheme().equals("jar");
         this.relativePath = relativePath;
         packageQualifiedName = FileUtils.toPackageQualifiedName(relativePath);
@@ -60,7 +91,7 @@ public class Resource {
     public String getFileNameWithoutExtension() {
         return FileUtils.removeFileExtension(path.getFileName().toString());
     }
-    
+
     public String getRelativePath() {
         return relativePath;
     }
@@ -71,6 +102,10 @@ public class Resource {
 
     public Path getPath() {
         return path;
+    }
+
+    public int getLine() {
+        return line;
     }
 
     private static final Map<String, byte[]> STREAM_CACHE = new HashMap();

@@ -37,6 +37,8 @@ public interface Actions {
     void call(String name, String arg);
 
     void callonce(String name, String arg);
+    
+    void csv(String name, String expression);
 
     void json(String name, String expression);
 
@@ -65,6 +67,10 @@ public interface Actions {
     void eval(String exp);
 
     void evalDocstring(String exp);
+    
+    void eval(String name, String dotOrParen, String expression);
+    
+    void evalIf(String expression);
     
     void formField(String name, List<String> values);
 
@@ -125,13 +131,11 @@ public interface Actions {
     void text(String name, String expression);
 
     void url(String expression);
-
-    void yaml(String name, String expression);
+    
+    void yaml(String name, String expression);        
     
     //==========================================================================
     //
-    void driver(String expression);
-    
-    void driverDot(String expression);
+    void driver(String expression);        
 
 }

@@ -13,7 +13,10 @@ function fn() {
   } else if (env == 'e2e') {
     // customize
   }
-  config.myObject = karate.read('classpath:test.json');
-  config.myFunction = karate.read('classpath:test.js');
+  config.myObject = read('classpath:test.json');
+  config.myFunction = read('classpath:test.js');
+  var port = karate.properties['karate.server.port'];
+  port = port || '8080';
+  config.mockServerUrl = 'http://localhost:' + port + '/v1/';
   return config;
 }

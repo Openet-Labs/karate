@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.w3c.dom.Node;
 
@@ -43,6 +44,7 @@ import org.w3c.dom.Node;
 public class ScriptValue {
 
     public static final ScriptValue NULL = new ScriptValue(null);
+    public static final ScriptValue FALSE = new ScriptValue(false);
 
     public static enum Type {
         NULL,
@@ -53,16 +55,17 @@ public class ScriptValue {
         LIST,
         JSON,
         XML,
-        JS_ARRAY,
-        JS_OBJECT,
         JS_FUNCTION,
         BYTE_ARRAY,
         INPUT_STREAM,
-        FEATURE
+        FEATURE,
+        JAVA_FUNCTION
     }
 
     private final Object value;
     private final Type type;
+    private boolean listLike;
+    private boolean mapLike;
     private final String source; // file this came from, for better debug / logging
 
     public Object getValue() {
@@ -87,10 +90,6 @@ public class ScriptValue {
                 return "json";
             case XML:
                 return "xml";
-            case JS_ARRAY:
-                return "js[]";
-            case JS_OBJECT:
-                return "js{}";
             case JS_FUNCTION:
                 return "js()";
             case BYTE_ARRAY:
@@ -99,6 +98,8 @@ public class ScriptValue {
                 return "stream";
             case FEATURE:
                 return "feature";
+            case JAVA_FUNCTION:
+                return "java()";
             default:
                 return "???";
         }
@@ -127,8 +128,12 @@ public class ScriptValue {
     public boolean isByteArray() {
         return type == Type.BYTE_ARRAY;
     }
+    
+    public boolean isFeature() {
+        return type == Type.FEATURE;
+    }
 
-    public boolean isUnknownType() {
+    public boolean isUnknown() {
         return type == Type.UNKNOWN;
     }
 
@@ -153,23 +158,11 @@ public class ScriptValue {
     }
 
     public boolean isListLike() {
-        switch (type) {
-            case JS_ARRAY:
-            case LIST:
-                return true;
-            case JSON:
-                DocumentContext doc = (DocumentContext) value;
-                return doc.json() instanceof List;
-            default:
-                return false;
-        }
+        return listLike;
     }
 
     public List getAsList() {
         switch (type) {
-            case JS_ARRAY:
-                ScriptObjectMirror som = (ScriptObjectMirror) value;
-                return new ArrayList(som.values());
             case LIST:
                 return getValue(List.class);
             case JSON:
@@ -180,12 +173,14 @@ public class ScriptValue {
         }
     }
 
+    public boolean isJson() {
+        return type == Type.JSON;
+    }
+    
     public boolean isJsonLike() {
         switch (type) {
             case JSON:
             case MAP:
-            case JS_OBJECT:
-            case JS_ARRAY:
             case LIST:
                 return true;
             default:
@@ -193,7 +188,8 @@ public class ScriptValue {
         }
     }
 
-    public ScriptValue copy() {
+    // here deep means even for java List and Map, we convert to JSON and re-marshal
+    public ScriptValue copy(boolean deep) {
         switch (type) {
             case NULL:
             case UNKNOWN:
@@ -203,6 +199,7 @@ public class ScriptValue {
             case INPUT_STREAM:
             case FEATURE:
             case JS_FUNCTION:
+            case JAVA_FUNCTION:
                 return this;
             case XML:
                 String xml = XmlUtils.toString(getValue(Node.class));
@@ -210,16 +207,20 @@ public class ScriptValue {
             case JSON:
                 String json = getValue(DocumentContext.class).jsonString();
                 return new ScriptValue(JsonPath.parse(json));
-            case JS_OBJECT: // is a map-like object, happens for json resulting from nashorn
             case MAP:
-                Map map = getValue(Map.class);
-                return new ScriptValue(new LinkedHashMap(map));
-            case JS_ARRAY:
-                ScriptObjectMirror som = getValue(ScriptObjectMirror.class);
-                return new ScriptValue(new ArrayList(som.values()));
+                if (deep) {
+                    String strMap = getAsJsonDocument().jsonString();
+                    return new ScriptValue(JsonPath.parse(strMap));
+                } else {
+                    return new ScriptValue(new LinkedHashMap(getValue(Map.class)));
+                }
             case LIST:
-                List list = getValue(List.class);
-                return new ScriptValue(new ArrayList(list));
+                if (deep) {
+                    String strList = getAsJsonDocument().jsonString();
+                    return new ScriptValue(JsonPath.parse(strList));
+                } else {
+                    return new ScriptValue(new ArrayList(getValue(List.class)));
+                }
             default:
                 return this;
         }
@@ -229,14 +230,10 @@ public class ScriptValue {
         switch (type) {
             case JSON:
                 return getValue(DocumentContext.class);
-            case JS_ARRAY: // happens for json resulting from nashorn
-                ScriptObjectMirror som = getValue(ScriptObjectMirror.class);
-                return JsonPath.parse(som.values());
-            case JS_OBJECT: // is a map-like object, happens for json resulting from nashorn
-            case MAP: // this happens because some jsonpath operations result in Map
+            case MAP:
                 Map<String, Object> map = getValue(Map.class);
                 return JsonPath.parse(map);
-            case LIST: // this also happens because some jsonpath operations result in List
+            case LIST:
                 List list = getValue(List.class);
                 return JsonPath.parse(list);
             default:
@@ -245,23 +242,12 @@ public class ScriptValue {
     }
 
     public boolean isMapLike() {
-        switch (type) {
-            case JSON:
-                DocumentContext doc = (DocumentContext) value;
-                return doc.json() instanceof Map;
-            case MAP:
-            case XML:
-            case JS_OBJECT:
-                return true;
-            default:
-                return false;
-        }
+        return mapLike;
     }
 
     public Map<String, Object> getAsMap() {
         switch (type) {
             case MAP:
-            case JS_OBJECT:
                 return getValue(Map.class);
             case JSON:
                 DocumentContext json = getValue(DocumentContext.class);
@@ -276,7 +262,7 @@ public class ScriptValue {
 
     public ScriptValue invokeFunction(ScenarioContext context, Object callArg) {
         ScriptObjectMirror som = getValue(ScriptObjectMirror.class);
-        return Script.evalFunctionCall(som, callArg, context);
+        return Script.evalJsFunctionCall(som, callArg, context);
     }
 
     public Map<String, Object> evalAsMap(ScenarioContext context) {
@@ -298,12 +284,10 @@ public class ScriptValue {
             case JSON:
                 DocumentContext doc = getValue(DocumentContext.class);
                 return JsonUtils.toPrettyJsonString(doc);
-            case JS_ARRAY:
             case LIST:
                 List list = getAsList();
                 DocumentContext listDoc = JsonPath.parse(list);
                 return JsonUtils.toPrettyJsonString(listDoc);
-            case JS_OBJECT:
             case MAP:
                 Map map = getAsMap();
                 DocumentContext mapDoc = JsonPath.parse(map);
@@ -312,8 +296,7 @@ public class ScriptValue {
                 return "(..bytes..)";
             case INPUT_STREAM:
                 return "(..stream..)";
-            case UNKNOWN:
-                return "(..???..)";
+            case UNKNOWN: // fall through
             default:
                 return value.toString();
         }
@@ -327,12 +310,10 @@ public class ScriptValue {
             case XML:
                 Node node = getValue(Node.class);
                 return XmlUtils.toXmlDoc(XmlUtils.toString(node).toLowerCase());
-            case JS_ARRAY:
             case LIST:
                 List list = getAsList();
                 DocumentContext listDoc = JsonPath.parse(list);
                 return JsonUtils.toJsonDoc(listDoc.jsonString().toLowerCase()).read("$");
-            case JS_OBJECT:
             case MAP:
                 DocumentContext mapDoc = JsonPath.parse(getAsMap());
                 return JsonUtils.toJsonDoc(mapDoc.jsonString().toLowerCase()).read("$");
@@ -340,7 +321,7 @@ public class ScriptValue {
                 return FileUtils.toString(getValue(InputStream.class)).toLowerCase();
             case STRING:
                 return value.toString().toLowerCase();
-            default: // NULL, UNKNOWN, JS_FUNCTION, BYTE_ARRAY, PRIMITIVE
+            default: // NULL, UNKNOWN, JS_FUNCTION, JAVA_FUNCTION, BYTE_ARRAY, PRIMITIVE
                 return value;
         }
     }
@@ -352,7 +333,7 @@ public class ScriptValue {
             return Integer.valueOf(getAsString());
         }
     }
-    
+
     public String getAsString() {
         switch (type) {
             case NULL:
@@ -367,12 +348,10 @@ public class ScriptValue {
                 } else {
                     return XmlUtils.toString(node);
                 }
-            case JS_ARRAY:
             case LIST:
                 List list = getAsList();
                 DocumentContext listDoc = JsonPath.parse(list);
                 return listDoc.jsonString();
-            case JS_OBJECT:
             case MAP:
                 DocumentContext mapDoc = JsonPath.parse(getAsMap());
                 return mapDoc.jsonString();
@@ -440,29 +419,46 @@ public class ScriptValue {
     }
 
     public ScriptValue(Object value, String source) {
+        // pre-process and convert any nashorn js objects into vanilla Map / List
+        if (value instanceof ScriptObjectMirror) {
+            ScriptObjectMirror som = (ScriptObjectMirror) value;
+            if (!som.isFunction()) {                
+                value = JsonUtils.toJsonDoc(value).read("$"); // results in Map or List
+                if (value instanceof Map) {
+                    Map map = (Map) value;
+                    som.forEach((k, v) -> { // check if any special objects need to be preserved
+                        if (v instanceof ScriptObjectMirror) {
+                            ScriptObjectMirror child = (ScriptObjectMirror) v;
+                            if (child.isFunction()) { // only 1st level JS functions will be retained
+                                map.put(k, child);
+                            }
+                        } else { // only 1st level non-JS (e.g. Java) objects will be retained
+                            map.put(k, v);
+                        }
+                    });
+                }
+            }
+        }
         this.value = value;
         this.source = source;
         if (value == null) {
             type = Type.NULL;
         } else if (value instanceof DocumentContext) {
+            DocumentContext doc = (DocumentContext) value;
+            listLike = doc.json() instanceof List;
+            mapLike = !listLike;
             type = Type.JSON;
         } else if (value instanceof Node) {
-            type = Type.XML;
+            mapLike = true;
+            type = Type.XML;            
         } else if (value instanceof List) {
+            listLike = true;
             type = Type.LIST;
+        } else if (value instanceof ScriptObjectMirror) { // has to be before Map
+            type = Type.JS_FUNCTION;
         } else if (value instanceof Map) {
-            if (value instanceof ScriptObjectMirror) {
-                ScriptObjectMirror som = (ScriptObjectMirror) value;
-                if (som.isArray()) {
-                    type = Type.JS_ARRAY;
-                } else if (som.isFunction()) {
-                    type = Type.JS_FUNCTION;
-                } else {
-                    type = Type.JS_OBJECT;
-                }
-            } else {
-                type = Type.MAP;
-            }
+            mapLike = true;
+            type = Type.MAP;
         } else if (value instanceof String) {
             type = Type.STRING;
         } else if (value instanceof byte[]) {
@@ -473,6 +469,8 @@ public class ScriptValue {
             type = Type.PRIMITIVE;
         } else if (value instanceof Feature) {
             type = Type.FEATURE;
+        } else if (value instanceof Function) {
+            type = Type.JAVA_FUNCTION;
         } else {
             type = Type.UNKNOWN;
         }

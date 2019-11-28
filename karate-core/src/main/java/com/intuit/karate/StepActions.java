@@ -49,10 +49,14 @@ public class StepActions implements Actions {
 
     public final ScenarioContext context;
 
-    public StepActions(FeatureContext featureContext, CallContext callContext, Scenario scenario, Logger logger) {
-        context = new ScenarioContext(featureContext, callContext, scenario, logger);
+    public StepActions(FeatureContext featureContext, CallContext callContext, Scenario scenario, LogAppender appender) {
+        this(featureContext, callContext, null, scenario, appender);
     }
-    
+
+    public StepActions(FeatureContext featureContext, CallContext callContext, ClassLoader classLoader, Scenario scenario, LogAppender appender) {
+        context = new ScenarioContext(featureContext, callContext, classLoader, scenario, appender);
+    }
+
     public StepActions(ScenarioContext context) {
         this.context = context;
     }
@@ -103,6 +107,12 @@ public class StepActions implements Actions {
     @When("^cookies (.+)")
     public void cookies(String expr) {
         context.cookies(expr);
+    }
+
+    @Override
+    @When("^csv (.+) = (.+)")
+    public void csv(String name, String expression) {
+        context.assign(AssignType.CSV, name, expression);
     }
 
     @Override
@@ -188,7 +198,7 @@ public class StepActions implements Actions {
     }
 
     @Override
-    @When("^yaml (.+) =$")
+    @When("^yaml (.+) = (.+)")
     public void yaml(String name, String expression) {
         context.assign(AssignType.YAML, name, expression);
     }
@@ -222,12 +232,12 @@ public class StepActions implements Actions {
     public void xmlstring(String name, String expression) {
         context.assign(AssignType.XML_STRING, name, expression);
     }
-    
+
     @Override
     @When("^bytes (.+) = (.+)")
     public void bytes(String name, String expression) {
         context.assign(AssignType.BYTE_ARRAY, name, expression);
-    }    
+    }
 
     @Override
     @When("^assert (.+)")
@@ -240,12 +250,12 @@ public class StepActions implements Actions {
     public void method(String method) {
         context.method(method);
     }
-    
+
     @Override
     @When("^retry until (.+)")
     public void retry(String until) {
         context.retry(until);
-    }    
+    }
 
     @Override
     @When("^soap action( .+)?")
@@ -294,7 +304,7 @@ public class StepActions implements Actions {
     public void status(int status) {
         context.status(status);
     }
-    
+
     @Override
     @When("^match (.+)(=|contains|any|only)$")
     public void matchDocstring(String expression, String operators, String rhs) {
@@ -362,18 +372,23 @@ public class StepActions implements Actions {
         context.eval(exp);
     }
 
+    @Override
+    @When("^([\\w]+)([^\\s^\\w])(.+)")
+    public void eval(String name, String dotOrParen, String expression) {
+        context.eval(name + dotOrParen + expression);
+    }
+
+    @Override
+    @When("^if (.+)")
+    public void evalIf(String exp) {
+        context.eval("if " + exp);
+    }
     //==========================================================================
     //
+
     @Override
     @When("^driver (.+)")
     public void driver(String expression) {
         context.driver(expression);
-    }    
-    
-    @Override
-    @When("^driver\\.(.+)")
-    public void driverDot(String expression) {
-        context.driverDot(expression);
     }
-
 }

@@ -23,6 +23,8 @@
  */
 package com.intuit.karate;
 
+import com.intuit.karate.driver.DockerTarget;
+import com.intuit.karate.driver.Target;
 import com.intuit.karate.http.HttpClient;
 
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -30,7 +32,6 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
 /**
  *
@@ -66,6 +67,7 @@ public class Config {
     private String proxyUsername;
     private String proxyPassword;
     private List<String> nonProxyHosts;
+    private String localAddress;
     private ScriptValue headers = ScriptValue.NULL;
     private ScriptValue cookies = ScriptValue.NULL;
     private ScriptValue responseHeaders = ScriptValue.NULL;
@@ -74,9 +76,11 @@ public class Config {
     private boolean logPrettyRequest;
     private boolean logPrettyResponse;
     private boolean printEnabled = true;
+    private boolean outlineVariablesAuto = true;
     private String clientClass;
     private HttpClient clientInstance;
     private Map<String, Object> userDefined;
+    private Target driverTarget;
     private Map<String, Object> driverOptions;
     private ScriptValue afterScenario = ScriptValue.NULL;
     private ScriptValue afterFeature = ScriptValue.NULL;
@@ -151,12 +155,27 @@ public class Config {
             case "driver":
                 driverOptions = value.getAsMap();
                 return false;
+            case "driverTarget":
+                if (value.isMapLike()) {
+                    Map<String, Object> map = value.getAsMap();
+                    if (map.containsKey("docker")) {
+                        driverTarget = new DockerTarget(map);
+                    } else {
+                        throw new RuntimeException("bad driverTarget config, expected key 'docker': " + map);
+                    }
+                } else {
+                    driverTarget = value.getValue(Target.class);
+                }
+                return false;
             case "retry":
                 if (value.isMapLike()) {
                     Map<String, Object> map = value.getAsMap();
                     retryInterval = get(map, "interval", retryInterval);
                     retryCount = get(map, "count", retryCount);                    
                 }
+                return false;
+            case "outlineVariablesAuto":
+                outlineVariablesAuto = value.isBooleanTrue();
                 return false;
             // here on the http client has to be re-constructed ================
             case "httpVersion":
@@ -187,9 +206,9 @@ public class Config {
                     sslTrustStore = (String) map.get("trustStore");
                     sslTrustStorePassword = (String) map.get("trustStorePassword");
                     sslTrustStoreType = (String) map.get("trustStoreType");
-                    String trustAll = (String) map.get("trustAll");
+                    Boolean trustAll = (Boolean) map.get("trustAll");
                     if (trustAll != null) {
-                        sslTrustAll = Boolean.valueOf(trustAll);
+                        sslTrustAll = trustAll;
                     }
                     sslAlgorithm = (String) map.get("algorithm");
                 } else {
@@ -215,11 +234,11 @@ public class Config {
                     proxyUri = (String) map.get("uri");
                     proxyUsername = (String) map.get("username");
                     proxyPassword = (String) map.get("password");
-                    ScriptObjectMirror temp = (ScriptObjectMirror) map.get("nonProxyHosts");
-                    if (temp != null) {
-                        nonProxyHosts = (List) temp.values();
-                    }
+                    nonProxyHosts = (List) map.get("nonProxyHosts");
                 }
+                return true;
+            case "localAddress":
+                localAddress = value.getAsString();
                 return true;
             case "userDefined":
                 userDefined = value.getAsMap();
@@ -247,6 +266,7 @@ public class Config {
         proxyUsername = parent.proxyUsername;
         proxyPassword = parent.proxyPassword;
         nonProxyHosts = parent.nonProxyHosts;
+        localAddress = parent.localAddress;
         headers = parent.headers;
         cookies = parent.cookies;
         responseHeaders = parent.responseHeaders;
@@ -259,6 +279,7 @@ public class Config {
         clientInstance = parent.clientInstance;
         userDefined = parent.userDefined;
         driverOptions = parent.driverOptions;
+        driverTarget = parent.driverTarget;
         afterScenario = parent.afterScenario;
         afterFeature = parent.afterFeature;
         showLog = parent.showLog;
@@ -267,6 +288,7 @@ public class Config {
         retryCount = parent.retryCount;
         clientHttpVersion = parent.clientHttpVersion;
         mockServerFallbackHttpVersion = parent.mockServerFallbackHttpVersion;
+        outlineVariablesAuto = parent.outlineVariablesAuto;
     }
         
     public void setCookies(ScriptValue cookies) {
@@ -346,6 +368,10 @@ public class Config {
     public List<String> getNonProxyHosts() {
         return nonProxyHosts;
     }
+
+    public String getLocalAddress() {
+        return localAddress;
+    }        
     
     public ScriptValue getHeaders() {
         return headers;
@@ -469,4 +495,17 @@ public class Config {
     		mockServerFallbackHttpVersion = fallbackHttpVersion;
     	}
     }
+
+    public boolean isOutlineVariablesAuto() {
+        return outlineVariablesAuto;
+    } 
+
+    public Target getDriverTarget() {
+        return driverTarget;
+    }
+
+    public void setDriverTarget(Target driverTarget) {
+        this.driverTarget = driverTarget;
+    }        
+
 }

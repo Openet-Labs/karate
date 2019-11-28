@@ -1,12 +1,10 @@
 # <img src="karate-core/src/main/resources/karate-logo.svg" height="60" width="60"/> Karate
-## Web-Services Testing Made `Simple.`
+## Test Automation Made `Simple.`
 [![Maven Central](https://img.shields.io/maven-central/v/com.intuit.karate/karate-core.svg)](https://mvnrepository.com/artifact/com.intuit.karate/karate-core) [![Build Status](https://travis-ci.org/intuit/karate.svg?branch=master)](https://travis-ci.org/intuit/karate) [![GitHub release](https://img.shields.io/github/release/intuit/karate.svg)](https://github.com/intuit/karate/releases) [![Support Slack](https://img.shields.io/badge/support-slack-red.svg)](https://github.com/intuit/karate/wiki/Support) [![Twitter Follow](https://img.shields.io/twitter/follow/KarateDSL.svg?style=social&label=Follow)](https://twitter.com/KarateDSL)
 
-Karate is the only open-source tool to combine API test-automation, [mocks](karate-netty) and [performance-testing](karate-gatling) into a **single**, *unified* framework. The BDD syntax popularized by Cucumber is language-neutral, and easy for even non-programmers. Besides powerful JSON & XML assertions, you can run tests in parallel for speed - which is critical for HTTP API testing.
+Karate is the only open-source tool to combine API test-automation, [mocks](karate-netty), [performance-testing](karate-gatling) and even [UI automation](karate-core) into a **single**, *unified* framework. The BDD syntax popularized by Cucumber is language-neutral, and easy for even non-programmers. Powerful JSON & XML assertions are built-in, and you can run tests in parallel for speed.
 
-You can easily build (or re-use) complex request payloads, and dynamically construct more requests from response data. The  payload and schema validation engine can perform a 'smart compare' (deep-equals) of two JSON or XML documents, and you can even ignore dynamic values where needed.
-
-Test execution and report generation feels like any standard Java project. But there's also a [stand-alone executable](karate-netty#standalone-jar) for teams not comfortable with Java. Just write tests in a **simple**, *readable* syntax - carefully designed for HTTP, JSON, GraphQL and XML. 
+Test execution and report generation feels like any standard Java project. But there's also a [stand-alone executable](karate-netty#standalone-jar) for teams not comfortable with Java. You don't have to compile code. Just write tests in a **simple**, *readable* syntax - carefully designed for HTTP, JSON, GraphQL and XML. And you can mix API and [UI test-automation](karate-core) within the same test script.
 
 ## Hello World
 
@@ -76,6 +74,7 @@ And you don't need to create additional Java classes for any of the payloads tha
     | <a href="#text"><code>text</code></a>
     | <a href="#table"><code>table</code></a>
     | <a href="#yaml"><code>yaml</code></a>
+    | <a href="#csv"><code>csv</code></a>
     | <a href="#type-string"><code>string</code></a>
     | <a href="#type-json"><code>json</code></a>
     | <a href="#type-xml"><code>xml</code></a>
@@ -140,6 +139,7 @@ And you don't need to create additional Java classes for any of the payloads tha
     | <a href="#responseheaders"><code>responseHeaders</code></a>
     | <a href="#responsecookies"><code>responseCookies</code></a>
     | <a href="#responsetime"><code>responseTime</code></a>
+    | <a href="#responsetype"><code>responseType</code></a>
     | <a href="#requesttimestamp"><code>requestTimeStamp</code></a>
   </td>
 </tr>
@@ -177,10 +177,12 @@ And you don't need to create additional Java classes for any of the payloads tha
     | <a href="#conditional-logic">Conditional Logic</a>
     | <a href="#hooks">Before / After Hooks</a>
     | <a href="#json-transforms">JSON Transforms</a>
+    | <a href="#loops">Loops</a>
     | <a href="#http-basic-authentication-example">HTTP Basic Auth</a> 
     | <a href="#http-header-manipulation">Header Manipulation</a> 
     | <a href="#text">GraphQL</a>
     | <a href="#async">Websockets / Async</a>
+    | <a href="#call-vs-read"><code>call</code> vs <code>read()</code></a>
   </td>
 </tr>
 <tr>
@@ -190,7 +192,7 @@ And you don't need to create additional Java classes for any of the payloads tha
     | <a href="karate-netty">Test Doubles</a>
     | <a href="karate-gatling">Performance Testing</a>
     | <a href="karate-core">UI Testing</a>
-    | <a href="https://github.com/intuit/karate/wiki/Karate-UI">Karate UI</a>
+    | <a href="https://github.com/intuit/karate/wiki/IDE-Support#vs-code-karate-plugin">VS Code / Debug</a>
     | <a href="#comparison-with-rest-assured">Karate vs REST-assured</a>
     | <a href="#cucumber-vs-karate">Karate vs Cucumber</a>
     | <a href="karate-demo">Examples and Demos</a>
@@ -201,14 +203,14 @@ And you don't need to create additional Java classes for any of the payloads tha
 # Features
 * Java knowledge is not required and even non-programmers can write tests
 * Scripts are plain-text, require no compilation step or IDE, and teams can collaborate using Git / standard SCM
-* Based on the popular Cucumber / Gherkin standard - with [IDE support](#running-in-eclipse-or-intellij) and syntax-coloring options
+* Based on the popular Cucumber / Gherkin standard - with [IDE support](https://github.com/intuit/karate/wiki/IDE-Support) and syntax-coloring options
 * Elegant [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) syntax 'natively' supports JSON and XML - including [JsonPath](#set) and [XPath](#xpath-functions) expressions
 * Eliminate the need for 'Java Beans' or 'helper code' to represent payloads and HTTP end-points, and [dramatically reduce the lines of code](https://twitter.com/KarateDSL/status/873035687817117696) needed for a test
 * Ideal for testing the highly dynamic responses from [GraphQL](http://graphql.org) API-s because of Karate's built-in [text-manipulation](#text) and [JsonPath](https://github.com/json-path/JsonPath#path-examples) capabilities
 * Tests are super-readable - as scenario data can be expressed in-line, in human-friendly [JSON](#json), [XML](#xml), Cucumber [Scenario](#the-cucumber-way) Outline [tables](#table), or a [payload builder](#set-multiple) approach [unique to Karate](https://gist.github.com/ptrthomas/d6beb17e92a43220d254af942e3ed3d9)
 * Express expected results as readable, well-formed JSON or XML, and [assert in a single step](#match) that the entire response payload (no matter how complex or deeply nested) - is as expected
 * Comprehensive [assertion capabilities](#fuzzy-matching) - and failures clearly report which data element (and path) is not as expected, for easy troubleshooting of even large payloads
-* [Embedded UI](https://github.com/intuit/karate/wiki/Karate-UI) for stepping through a script in debug mode where you can even [re-play a step while editing it](https://twitter.com/ptrthomas/status/889356965461217281) - a huge time-saver
+* [Fully featured debugger](https://github.com/intuit/karate/wiki/IDE-Support#vs-code-karate-plugin) that can even [re-play a step while editing it](https://twitter.com/KarateDSL/status/1167533484560142336) - a *huge* time-saver
 * Simpler and more [powerful alternative](https://twitter.com/KarateDSL/status/878984854012022784) to JSON-schema for [validating payload structure](#schema-validation) and format - that even supports cross-field / domain validation logic
 * Scripts can [call other scripts](#calling-other-feature-files) - which means that you can easily re-use and maintain authentication and 'set up' flows efficiently, across multiple tests
 * Embedded JavaScript engine that allows you to build a library of [re-usable functions](#calling-javascript-functions) that suit your specific environment or organization
@@ -224,10 +226,11 @@ And you don't need to create additional Java classes for any of the payloads tha
 * Easily invoke JDK classes, Java libraries, or re-use custom Java code if needed, for [ultimate extensibility](#calling-java)
 * Simple plug-in system for [authentication](#http-basic-authentication-example) and HTTP [header management](#configure-headers) that will handle any complex, real-world scenario
 * Future-proof 'pluggable' HTTP client abstraction supports both Apache and Jersey so that you can [choose](#maven) what works best in your project, and not be blocked by library or dependency conflicts
-* Option to invoke via a [Java API](#java-api),  which means that you can easily [mix Karate into existing Selenium / WebDriver test-suites](https://stackoverflow.com/q/47795762/143475).
-* [Cross-browser Web, Mobile and Desktop UI automation](karate-core) (experimental) so that you can test *all* layers of your application with the same framework
+* [Cross-browser Web, Mobile and Desktop UI automation](karate-core) so that you can test *all* layers of your application with the same framework
+* Option to invoke via a [Java API](#java-api),  which means that you can easily [mix Karate into existing Selenium / WebDriver test-suites](https://stackoverflow.com/q/47795762/143475)
 * [Save significant effort](https://twitter.com/ptrthomas/status/986463717465391104) by re-using Karate test-suites as [Gatling performance tests](karate-gatling) that deeply assert that server responses are accurate under load
-* Gatling integration can hook into [*any* custom Java code](https://github.com/intuit/karate/tree/master/karate-gatling#custom) - which means that you can test even non-HTTP protocols such as [gRPC](https://thinkerou.com/karate-grpc/)
+* Gatling integration can hook into [*any* custom Java code](https://github.com/intuit/karate/tree/master/karate-gatling#custom) - which means that you can perf-test even non-HTTP protocols such as [gRPC](https://github.com/thinkerou/karate-grpc)
+* Built-in [distributed-testing capability](https://github.com/intuit/karate/wiki/Distributed-Testing) that works for API, UI and even [load-testing](https://github.com/intuit/karate/wiki/Distributed-Testing#gatling) - without needing any complex "grid" infrastructure
 * [API mocks](karate-netty) or test-doubles that even [maintain CRUD 'state'](https://hackernoon.com/api-consumer-contract-tests-and-test-doubles-with-karate-72c30ea25c18) across multiple calls - enabling TDD for micro-services and [Consumer Driven Contracts](https://martinfowler.com/articles/consumerDrivenContracts.html)
   * HTTP/1.1 and HTTP/2 supported with mock server
   * HTTP/2 Upgrade and prior-knowledge supported both with cleartext and SLL (supporting ALPN)
@@ -249,28 +252,33 @@ And you don't need to create additional Java classes for any of the payloads tha
   * supports HTTP/2 with SSL with the limitation that the server defaults to using HTTP/2 (without upgrade or ALPN)
 
 ## Real World Examples
-
 A set of real-life examples can be found here: [Karate Demos](karate-demo)
 
 ## Comparison with REST-assured
 For teams familiar with or currently using [REST-assured](http://rest-assured.io), this detailed comparison of [Karate vs REST-assured](http://tinyurl.com/karatera) - can help you evaluate Karate.
 
 ## References
-* [REST API Testing with Karate](http://www.baeldung.com/karate-rest-api-testing) - tutorial by [Baeldung](http://www.baeldung.com/author/baeldung/)
+* [Karate entered the ThoughtWorks Tech Radar](https://twitter.com/KarateDSL/status/1120985060843249664) in April 2019
 * [9 great open-source API testing tools: how to choose](https://techbeacon.com/9-great-open-source-api-testing-tools-how-choose) - [TechBeacon](https://techbeacon.com) article by [Joe Colantonio](https://twitter.com/jcolantonio)
 * [Ceinture noire Karate en tests d’API REST](https://devfesttoulouse.fr/schedule/2018-11-08?sessionId=4128) - [Slides and Code](https://github.com/ncomet/karate-conf2018) - [DevFest Touluse 2018](https://devfesttoulouse.fr) talk by [Nicolas Comet](https://twitter.com/NicolasComet) and [Benoît Prioux](https://twitter.com/binout)
-* [Karate, the black belt of HTTP API testing ? - Video / Slides](https://adapt.to/2018/en/schedule/karate-the-black-belt-of-http-api-testing.html) / [Photo](https://twitter.com/bdelacretaz/status/1039444256572751873) / [Code](http://tinyurl.com/potsdam2018) - [adaptTo() 2018](https://adapt.to/2018/en.html) talk by [Bertrand Delacretaz](https://twitter.com/bdelacretaz) <br/>of Adobe & the Apache Software Foundation ([Board of Directors](http://www.apache.org/foundation/#who-runs-the-asf))
+* [Karate, the black belt of HTTP API testing ? - Video / Slides](https://adapt.to/2018/en/schedule/karate-the-black-belt-of-http-api-testing.html) / [Photo](https://twitter.com/bdelacretaz/status/1039444256572751873) / [Code](http://tinyurl.com/potsdam2018) - [adaptTo() 2018](https://adapt.to/2018/en.html) talk by [Bertrand Delacretaz](https://twitter.com/bdelacretaz) of Adobe & the Apache Software Foundation ([Board of Directors](http://www.apache.org/foundation/#who-runs-the-asf))
 * [Testing Web Services with Karate](https://automationpanda.com/2018/12/10/testing-web-services-with-karate/) - quick start guide and review by [Andrew Knight](https://twitter.com/automationpanda) at the *Automation Panda* blog
 
 
 You can find a lot more references [in the wiki](https://github.com/intuit/karate/wiki/Community-News). Karate also has its own 'tag' and a very active and supportive community at [Stack Overflow](https://stackoverflow.com/questions/tagged/karate).
 
 # Getting Started
-Karate requires [Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html) 8 (at least version 1.8.0_112 or greater) and then either [Maven](http://maven.apache.org), [Gradle](https://gradle.org) or [Eclipse](#eclipse-quickstart) to be installed.
+If you are a Java developer - Karate requires [Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html) 8 (at least version 1.8.0_112 or greater) and then either [Maven](http://maven.apache.org), [Gradle](https://gradle.org), [Eclipse](#eclipse-quickstart) or [IntelliJ](https://github.com/intuit/karate/wiki/IDE-Support#intellij-community-edition) to be installed. Note that Karate works fine on OpenJDK. Any Java version from 8-12 is supported.
+
+If you are new to programming or test-automation, refer to this video for [getting started with just the (free) IntelliJ Community Edition](https://youtu.be/W-af7Cd8cMc). Other options are the [quickstart](#quickstart) or the [standalone executable](karate-netty#standalone-jar).
+
+If you *don't* want to use Java, you have the option of just downloading and extracting the [ZIP release](https://github.com/intuit/karate/wiki/ZIP-Release). Try this especially if you don't have much experience with programming or test-automation. We recommend that you use the [Karate extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=kirkslota.karate-runner) - and with that, JavaScript, .NET and Python programmers will feel right at home.
+
+Visual Studio Code can be used for Java (or Maven) projects as well. One reason to use it is the excellent [*debug support* that we have for Karate](https://twitter.com/KarateDSL/status/1167533484560142336).
 
 ## Maven
-
 Karate is designed so that you can choose between the [Apache](https://hc.apache.org/index.html), [Apache Async (Beta)](https://hc.apache.org/httpcomponents-client-5.0.x/index.html) or [Jersey](https://jersey.java.net) HTTP client implementations.
+
 
 So you need two `<dependencies>`:
 
@@ -278,13 +286,13 @@ So you need two `<dependencies>`:
 <dependency>
     <groupId>com.intuit.karate</groupId>
     <artifactId>karate-apache</artifactId>
-    <version>0.9.1</version>
+    <version>0.9.4</version>
     <scope>test</scope>
 </dependency>
 <dependency>
     <groupId>com.intuit.karate</groupId>
     <artifactId>karate-junit4</artifactId>
-    <version>0.9.1</version>
+    <version>0.9.4</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -295,16 +303,17 @@ For targeting HTTP/2 requests then use `karate-apache-async` instead of `karate-
 If you want to use [JUnit 5](#junit-5), use `karate-junit5` instead of `karate-junit4`.
 
 ## Gradle
-
-Alternatively for Gradle you need these two entries:
+Alternatively for [Gradle](https://gradle.org) you need these two entries:
 
 ```yml
-    testCompile 'com.intuit.karate:karate-junit4:0.9.1'
-    testCompile 'com.intuit.karate:karate-apache:0.9.1'
+    testCompile 'com.intuit.karate:karate-junit4:0.9.4'
+    testCompile 'com.intuit.karate:karate-apache:0.9.4'
 ```
 
+Also refer to the wiki for using [Karate with Gradle](https://github.com/intuit/karate/wiki/Gradle).
+
 ### Quickstart
-It may be easier for you to use the Karate Maven archetype to create a skeleton project with one command. You can then skip the next few sections, as the `pom.xml`, recommended directory structure and starter files would be created for you.
+It may be easier for you to use the Karate Maven archetype to create a skeleton project with one command. You can then skip the next few sections, as the `pom.xml`, recommended directory structure, sample test and [JUnit 5](#junit-5) runners - will be created for you.
 
 > If you are behind a corporate proxy, or especially if your local Maven installation has been configured to point to a repository within your local network, the command below may not work. One workaround is to temporarily disable or rename your Maven [`settings.xml`](https://maven.apache.org/settings.html) file, and try again.
 
@@ -314,22 +323,15 @@ You can replace the values of `com.mycompany` and `myproject` as per your needs.
 mvn archetype:generate \
 -DarchetypeGroupId=com.intuit.karate \
 -DarchetypeArtifactId=karate-archetype \
--DarchetypeVersion=0.9.1 \
+-DarchetypeVersion=0.9.4 \
 -DgroupId=com.mycompany \
 -DartifactId=myproject
 ```
 
 This will create a folder called `myproject` (or whatever you set the name to).
 
-> You can also try using Karate as a [stand-alone executable](karate-netty#standalone-jar) which is a good option if you have difficulties with the above process, or if you are not comfortable with Maven or Java.
-
-### Eclipse Quickstart
-
-You can refer to this [nice blog post and video](https://www.joecolantonio.com/2017/03/23/rest-test-tool-karate-api-testing/) by Joe Colantonio which provides step by step instructions on how to get started using Eclipse (without having to run the command above). Use the latest available version of Karate (refer to the `archetypeVersion` above), and also make sure you install the [Cucumber-Eclipse plugin](https://cucumber.io/cucumber-eclipse/) !
-
-Another blog post which is a good step-by-step reference is [this one by Micha Kops](https://semaphoreci.com/community/tutorials/testing-a-java-spring-boot-rest-api-with-karate) - especially if you use the 'default' maven folder structure instead of the one recommended below.
-
-And one more up-to-date and useful reference is this [step-by-step guide by Andy Knight](https://automationpanda.com/2018/12/10/testing-web-services-with-karate/) using Visual Studio Code instead of Eclipse or IntelliJ.
+### IntelliJ Quickstart
+Refer to this video for [getting started with the free IntelliJ Community Edition](https://youtu.be/W-af7Cd8cMc). It simplifies the above process, since you only need to install IntelliJ. For Eclipse, refer to the wiki on [IDE Support](https://github.com/intuit/karate/wiki/IDE-Support).
 
 ## Folder Structure
 A Karate test script has the file extension `.feature` which is the standard followed by Cucumber.  You are free to organize your files using regular Java package conventions.
@@ -355,7 +357,7 @@ This can be easily achieved with the following tweak to your maven `<build>` sec
 
 This is very common in the world of Maven users and keep in mind that these are tests and not production code.  
 
-Alternatively, if using gradle then add the following `sourceSets` definition
+Alternatively, if using Gradle then add the following `sourceSets` definition
          
 ```yml
 sourceSets {
@@ -414,23 +416,9 @@ Assuming you use JUnit, there are some good reasons for the recommended (best pr
 For details on what actually goes into a script or `*.feature` file, refer to the [syntax guide](#syntax-guide).
 
 ## IDE Support
-Many popular text editors such as [Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=stevejpurves.cucumber) have support for the [Gherkin](https://docs.cucumber.io/gherkin/) syntax. Using a Java IDE with Cucumber-JVM support is recommended for the best developer experience.
-
-### Running in Eclipse or IntelliJ
-If you use the open-source [Eclipse Java IDE](http://www.eclipse.org), you should consider installing the free [Cucumber-Eclipse plugin](https://cucumber.io/cucumber-eclipse/). It provides syntax coloring, and the best part is that you can 'right-click' and run Karate test scripts without needing to write a single line of Java code.
-
-If you use [IntelliJ IDEA](https://www.jetbrains.com/idea/), Cucumber support is [built-in](https://www.jetbrains.com/idea/help/cucumber.html), and you can even select a single [`Scenario`](#script-structure) within a `Feature` to run at a time. If you are using the free [Community Edition](https://www.jetbrains.com/idea/download/), you can easily install the "Gherkin" and "Cucumber for Java" plugins.
-
-> Important: For the IntelliJ Community Edition, the "Substeps IntelliJ Plugin" is not compatible and should *not* be installed.
-
-For both Eclipse and IntelliJ, when you run a feature (or package with multiple features) via the IDE - you will get the [JUnit HTML report](#junit-html-report).
-
-### Troubleshooting Cucumber IDE Support
-* On Eclipse you may see warnings such as `Step 'xxx' does not have a matching glue code` or `required(..)+ loop did not match anything at input Scenario:`, and on IntelliJ: `Unimplemented substep definition`. Refer to [this ticket](https://github.com/intuit/karate/issues/90) on how to solve this.
-* On IntelliJ you may run into issues if JavaFX is not installed by default (e.g. on Ubuntu). Refer to [this ticket](https://github.com/intuit/karate/issues/124#issuecomment-320212727) for solutions.
+Refer to the wiki - [IDE Support](https://github.com/intuit/karate/wiki/IDE-Support).
 
 #### `file.encoding`
-
 In some cases, for large payloads and especially when the default system encoding is not `UTF-8` (Windows or non-US locales), you may run into issues where a `java.io.ByteArrayInputStream` is encountered instead of a string. Other errors could be a `java.net.URISyntaxException` and [`match`](#match) not working as expected because of special or foreign characters, e.g. German or `ISO-8859-15`. Typical symptoms are your tests working fine via the IDE but not when running via Maven or Gradle. The solution is to ensure that when Karate tests run, the JVM `file.encoding` is set to `UTF-8`. This can be done via the [`maven-surefire-plugin` configuration](http://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#argLine). Add the plugin to the `<build>/<plugins>` section of your `pom.xml` if not already present: 
 
 ```xml
@@ -497,6 +485,26 @@ class SampleTest {
 }
 ```
 
+You should be able to right-click and run a single method using your IDE - which should be sufficient when you are in development mode. But to be able to run JUnit 5 tests from the command-line, you need to ensure that the latest version of the [maven-surefire-plugin](https://maven.apache.org/surefire/maven-surefire-plugin/examples/junit-platform.html) is present in your project `pom.xml` (within the `<build>/<plugins>` section):
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <version>2.22.2</version>
+</plugin>
+```
+
+> There is an issue with the `0.9.4` JUnit 5 dependencies, you will need to manually add [`junit-jupiter-engine` as a dependency](https://github.com/intuit/karate/issues/823#issuecomment-509608205).
+
+To run a single test method, for example the `testTags()` in the example above, you can do this:
+
+```
+mvn test -Dtest=SampleTest#testTags
+```
+
+Also look at how to run tests via the [command-line](#command-line) and the [parallel runner](#junit-5-parallel-execution).
+
 ### JUnit HTML report
 When you use a JUnit runner - after the execution of each feature, an HTML report is output to the `target/surefire-reports` folder and the full path will be printed to the console (see [video](https://twitter.com/KarateDSL/status/935029435140489216)).
 
@@ -562,7 +570,7 @@ Multiple feature files (or paths) can be specified, de-limited by the space char
 
 ### Command Line - Gradle
 
-For gradle you must extend the test task to allow the `karate.options` to be passed to the runtime (otherwise they get consumed by Gradle itself). To do that, add the following:
+For Gradle you must extend the test task to allow the `karate.options` to be passed to the runtime (otherwise they get consumed by Gradle itself). To do that, add the following:
 
 ```yml
 test {
@@ -575,7 +583,7 @@ test {
 }
 ```
 
-And then the above command in gradle would look like:
+And then the above command in Gradle would look like:
 
 ```
 ./gradlew test -Dtest=CatsRunner
@@ -604,7 +612,7 @@ You can 'lock down' the fact that you only want to execute the single JUnit clas
 <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-surefire-plugin</artifactId>
-    <version>2.10</version>
+    <version>${maven.surefire.version}</version>
     <configuration>
         <includes>
             <include>animals/AnimalsTest.java</include>
@@ -637,8 +645,13 @@ The big drawback of the approach above is that you cannot run tests in parallel.
 And most importantly - you can run tests in parallel without having to depend on third-party hacks that introduce code-generation and config 'bloat' into your `pom.xml` or `build.gradle`.
 
 ## Parallel Execution
-Karate can run tests in parallel, and dramatically cut down execution time. This is a 'core' feature and does not depend on JUnit, Maven or Gradle.
+Karate can run tests in parallel, and dramatically cut down execution time. This is a 'core' feature and does not depend on JUnit, Maven or Gradle. Look at both the examples below - that show different ways of "choosing" features to run.
 
+* You can use the returned `Results` object to check if any scenarios failed, and to even summarize the errors
+* [JUnit XML](https://wiki.jenkins-ci.org/display/JENKINS/JUnit+Plugin) reports will be generated in the "`reportDir`" path you specify, and you can easily configure your CI to look for these files after a build (for e.g. in `**/*.xml` or `**/surefire-reports/*.xml`)
+* [Cucumber JSON reports](https://relishapp.com/cucumber/cucumber/docs/formatters/json-output-formatter) will be generated side-by-side with the JUnit XML reports and with the same name, except that the extension will be `.json` instead of `.xml`
+
+### JUnit 4 Parallel Execution
 > Important: **do not** use the `@RunWith(Karate.class)` annotation. This is a *normal* JUnit 4 test class !
 
 ```java
@@ -660,15 +673,44 @@ public class TestParallel {
 }
 ```
 
-Things to note:
 * You don't use a JUnit runner (no `@RunWith` annotation), and you write a plain vanilla JUnit test (it could even be a normal Java class with a `main` method) using the `Runner.parallel()` static method in `karate-core`.
-* You can use the returned `Results` object to check if any scenarios failed, and to even summarize the errors
-* The first argument can be any class that marks the 'root package' in which `*.feature` files will be looked for, and sub-directories will be also scanned. As shown above you would typically refer to the enclosing test-class itself. If the class you refer to has a `@KarateOptions` annotation, it will be processed (see below).
-* The second argument is the number of threads to use.
-* [JUnit XML](https://wiki.jenkins-ci.org/display/JENKINS/JUnit+Plugin) reports will be generated in the path you specify as the third parameter, and you can easily configure your CI to look for these files after a build (for e.g. in `**/*.xml` or `**/surefire-reports/*.xml`). This argument is optional and will default to `target/surefire-reports`.
-* [Cucumber JSON reports](https://relishapp.com/cucumber/cucumber/docs/formatters/json-output-formatter) will be generated side-by-side with the JUnit XML reports and with the same name, except that the extension will be `.json` instead of `.xml`.
+* The first argument to the `parallel()` method can be any class that marks the 'root package' in which `*.feature` files will be looked for, and sub-directories will be also scanned. As shown above you would typically refer to the enclosing test-class itself. If the class you refer to has a `@KarateOptions` annotation, it will be processed.
 * Options passed to `@KarateOptions` would work as expected, provided you point the `Runner` to the annotated class as the first argument. Note that in this example, any `*.feature` file tagged as `@ignore` will be skipped. You can also specify tags on the [command-line](#test-suites).
-* For convenience, some stats are logged to the console when execution completes, which should look something like this:
+* The second argument is the number of threads to use.
+* The third argument is optional, and is the `reportDir` [mentioned above](#parallel-execution).
+* The `@KarateOptions` can be limiting in some cases when you want to inherit from other test classes - or when you want to dynamically and programmatically determine the tags and features to be included. See the [JUnit 5 example](#junit-5-parallel-execution) for an alternative form of the `Runner.parallel()` API. 
+
+### JUnit 5 Parallel Execution
+For [JUnit 5](#junit-5) you can omit the `public` modifier for the class and method, and there are some changes to `import` package names. The method signature of the `assertTrue` has flipped around a bit.
+
+```java
+import com.intuit.karate.Results;
+import com.intuit.karate.Runner;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+class TestParallel {
+
+    @Test
+    void testParallel() {
+        Results results = Runner.parallel("target/surefire-reports", 5, "~@ignore", "classpath:animals");
+        assertEquals(0, results.getFailCount(), results.getErrorMessages());
+    }
+
+}
+```
+
+* You don't use `@Karate.Test` for the method, and you just use the JUnit 5 `@Test` annotation.
+* Instead of using the [`@KarateOptions`](#karate-options) annotation (which will also work), you can use an alternate form of the `Runner.parallel()` API that takes tags and feature paths as the last "var arg" argument.
+* The report output directory will default to `target/surefire-reports`, so you can use a shorter API that starts with the parallel thread count, e.g.:
+  * `Runner.parallel(5, "~@ignore", "classpath:animals")`.
+* [Tags (or tag combinations)](#tags) are detected if an argument starts with a `@` or a `~`. You can expicitly refer to multiple features relative to the [`classpath:`](#classpath) or to a folder (or folders), giving you great flexibility to "compose" tests, e.g:
+  * `Runner.parallel(5, "~@ignore", "@smoke1,@smoke2", "classpath:animals/cats/crud.feature", "classpath:animals/dogs")`
+
+> To programmatically choose and run a set of features (and tags) at run time, refer to this example [`DemoTestSelected.java`](karate-demo/src/test/java/demo/DemoTestSelected.java) for yet another alternative API that uses a `List<String>` of tags and paths.
+
+### Parallel Stats
+For convenience, some stats are logged to the console when execution completes, which should look something like this:
 
 ```
 ======================================================
@@ -680,12 +722,10 @@ scenarios:  145 | passed:   145 | failed: 0
 
 The parallel runner will always run `Feature`-s in parallel. Karate will also run `Scenario`-s in parallel by default. So if you have a `Feature` with multiple `Scenario`-s in it - they will execute in parallel, and even each `Examples` row in a `Scenario Outline` will do so ! 
 
-The parallel runner will output a `timeline.html` file in the report output directory mentioned above (`target/surefire-reports` by default) which is useful for visually verifying or troubleshooting the effectiveness of the test-run ([see video](https://twitter.com/KarateDSL/status/1049321708241317888)).
+A `timeline.html` file will also be saved to the report output directory mentioned above (`target/surefire-reports` by default) - which is useful for visually verifying or troubleshooting the effectiveness of the test-run ([see video](https://twitter.com/KarateDSL/status/1049321708241317888)).
 
 ### `@parallel=false`
-In rare cases you may want to suppress the default of `Scenario`-s executing in parallel and the special [`tag`](#tags) `@parallel=false` can be used. If you place it above the [`Feature`](#script-structure) keyword, it will apply to all `Scenario`-s but you just want one or two `Scenario`-s to NOT run in parallel, you can place this tag on only those `Scenario`-s. See [example](karate-demo/src/test/java/demo/encoding/encoding.feature).
-
-> There is also an API to run a chosen set of features (and tags) which may be useful in cases where you dynamically want to select features at run time. Refer to this example [`DemoTestSelected.java`](karate-demo/src/test/java/demo/DemoTestSelected.java)
+In rare cases you may want to suppress the default of `Scenario`-s executing in parallel and the special [`tag`](#tags) `@parallel=false` can be used. If you place it above the [`Feature`](#script-structure) keyword, it will apply to all `Scenario`-s. And if you just want one or two `Scenario`-s to NOT run in parallel, you can place this tag above only *those* `Scenario`-s. See [example](karate-demo/src/test/java/demo/encoding/encoding.feature).
 
 ## Test Reports
 As mentioned above, most CI tools would be able to process the JUnit XML output of the [parallel runner](#parallel-execution) and determine the status of the build as well as generate reports.
@@ -700,7 +740,7 @@ This report is recommended especially because Karate's integration includes the 
 
 <img src="karate-demo/src/test/resources/karate-maven-report-http.jpg" height="600px"/>
 
-The demo also features [code-coverage using Jacoco](karate-demo#code-coverage-using-jacoco).
+The demo also features [code-coverage using Jacoco](karate-demo#code-coverage-using-jacoco). Some third-party report-server solutions integrate with Karate such as [ReportPortal.io](https://github.com/reportportal/agent-java-karate).
 
 ## Logging
 > This is optional, and Karate will work without the logging config in place, but the default console logging may be too verbose for your needs.
@@ -790,6 +830,41 @@ This approach is indeed slightly more complicated than traditional `*.properties
 
 And there is no more worrying about Maven profiles and whether the 'right' `*.properties` file has been copied to the proper place.
 
+### Restrictions on Global Variables
+Non-JSON values such as Java object references or JS functions are supported only if they are at the "root" of the JSON returned from [`karate-config.js`](#karate-configjs). So this below will *not* work:
+
+```javascript
+function fn() {
+  var config = {};
+  config.utils = {};
+  config.utils.uuid = function(){ return java.util.UUID.randomUUID() + '' };
+  // this is wrong, the "nested" uuid will be lost
+  return config;
+}
+```
+
+The recommended best-practice is to move the `uuid` function into a common feature file following the pattern described [here](#multiple-functions-in-one-file):
+
+```javascript
+function fn() {
+  var config = {};
+  config.utils = karate.call('utils.feature')
+  return config;
+}
+```
+
+But you can opt for using [`karate.toMap()`](#karate-tomap) which will "wrap" things so that the nested objects are not "lost":
+
+```javascript
+function fn() {
+  var config = {};
+  var utils = {};
+  utils.uuid = function(){ return java.util.UUID.randomUUID() + '' };
+  config.utils = karate.toMap(utils);
+  return config;
+}
+```
+
 ## Switching the Environment
 There is only one thing you need to do to switch the environment - which is to set a Java system property.
 
@@ -862,7 +937,7 @@ Advanced users who build frameworks on top of Karate have the option to supply a
 ## Script Structure
 Karate scripts are technically in '[Gherkin](https://docs.cucumber.io/gherkin/reference/)' format - but all you need to grok as someone who needs to test web-services are the three sections: `Feature`, `Background` and `Scenario`. There can be multiple Scenario-s in a `*.feature` file, and at least one should be present. The `Background` is optional. 
 
-> Variables set using [`def`](#def) in the `Background` will be re-set before *every* `Scenario`. If you are looking for a way to do something only **once** per `Feature`, take a look at [`callonce`](#callonce). On the other hand, if you are expecting a variable in the `Background` to be modified by one `Scenario` so that later ones can see the updated value - that is *not* how you should think of them, and you should combine your 'flow' into one scenario. Keep in mind that you should be able to comment-out a `Scenario` or skip some via [`tags`](#tags) without impacting any others. Note that the [parallel runner](#parallel-execution) will run `Scenario`-s in parallel, which means they can run in *any* order.
+> Variables set using [`def`](#def) in the `Background` will be re-set before *every* `Scenario`. If you are looking for a way to do something only **once** per `Feature`, take a look at [`callonce`](#callonce). On the other hand, if you are expecting a variable in the `Background` to be modified by one `Scenario` so that later ones can see the updated value - that is *not* how you should think of them, and you should combine your 'flow' into one scenario. Keep in mind that you should be able to comment-out a `Scenario` or skip some via [`tags`](#tags) without impacting any others. Note that the [parallel runner](#parallel-execution) will run `Scenario`-s in parallel, which means they can run in *any* order. If you are looking for ways to do something only *once* per feature or across *all* your tests, see [Hooks](#hooks).
 
 Lines that start with a `#` are comments.
 ```cucumber
@@ -890,7 +965,6 @@ The business of web-services testing requires access to low-level aspects such a
 Karate does not attempt to have tests be in "natural language" like how Cucumber tests are [traditionally expected to be](https://docs.cucumber.io/gherkin/reference/). That said, the syntax is very concise, and the convention of every step having to start with either `Given`, `And`, `When` or `Then`, makes things very readable. You end up with a decent approximation of BDD even though web-services by nature are "headless", without a UI, and not really human-friendly.
 
 #### Cucumber vs Karate
-
 > Karate was based on Cucumber-JVM until version 0.8.0 but the parser and engine were [re-written from scratch](https://github.com/intuit/karate/issues/444) in 0.9.0 onwards. So we use the same [Gherkin](https://docs.cucumber.io/gherkin/) syntax - but the similarity ends there.
 
 If you are familiar with Cucumber (JVM), you may be wondering if you need to write [step-definitions](https://docs.cucumber.io/gherkin/step-organization/). The answer is **no**.
@@ -1041,24 +1115,32 @@ When def session = <session><locale>#(lang)</locale><sessionUser>#(user)</sessio
 
 This comes in useful in some cases - and avoids needing to use the [`set`](#set) keyword or [JavaScript functions](#javascript-functions) to manipulate JSON. So you get the best of both worlds: the elegance of JSON to express complex nested data - while at the same time being able to dynamically plug values (that could even be other JSON or XML 'trees') into a 'template'.
 
+Note that embedded expressions will be evaluated even when you [`read()` from a JSON or XML file](#reading-files). This is super-useful for re-use and data-driven tests.
+
 A few special built-in variables such as `$` (which is a [reference to the JSON root](#referring-to-self)) - can be mixed into JSON embedded expressions.
 
 A [special case](#remove-if-null) of embedded expressions can remove a JSON key (or XML element / attribute) if the expression evaluates to `null`.
 
 #### Rules for Embedded Expressions
-They work only within JSON, XML or when the Right Hand Side of the [Karate expression](#karate-expressions) is a "quoted string". And the expression *has* to start with `"#(` and end with `)` - so note that string-concatenation may not work quite the way you expect:
+* They work only within JSON or XML and when on the Right Hand Side of a `def` or `match` or when you [`read()`](#reading-files) a JSON or XML file. And the expression *has* to start with `"#(` and end with `)` - so note that string-concatenation may not work quite the way you expect:
 
 ```cucumber
 # wrong !
-* def foo = 'hello #(name)'
+* def foo = { bar: 'hello #(name)' }
 # right !
-* def foo = '#("hello " + name)'
+* def foo = { bar: '#("hello " + name)' }
 ```
 
 Observe how you can achieve string concatenation if you really want, because any valid JavaScript expression can be stuffed within an embedded expression. You could always do this in two steps:
 ```cucumber        
 * def temp = 'hello ' + name
-* def foo = '#(temp)'
+* def foo = { bar: '#(temp)' }
+```
+
+As a convenience, embedded expressions are supported on the Right Hand Side of a [`match`](#match) statement even for "quoted string" literals:
+```cucumber
+* def foo = 'a1'
+* match foo == '#("a" + 1)'
 ```
 
 ### Enclosed JavaScript
@@ -1252,13 +1334,19 @@ Note how strings have to be enclosed in quotes. This is so that you can mix expr
 ```
 Refer to this file for a detailed example: [`replace.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/replace.feature)
 
-## `yaml`
-### Import YAML as JSON
-For those who may prefer [YAML](http://yaml.org) as a simpler way to represent data, Karate allows you to read YAML content 'in-line' or even from a [file](#reading-files) - and it will be auto-converted to JSON.
+## YAML Files
+For those who may prefer [YAML](http://yaml.org) as a simpler way to represent data, Karate allows you to read YAML content from a [file](#reading-files) - and it will be auto-converted into JSON.
 
 ```cucumber
-# reading yaml 'in-line', note the 'yaml' keyword instead of 'def'
-* yaml foo =
+# yaml from a file (the extension matters), and the data-type of 'bar' would be JSON
+* def bar = read('data.yaml')
+```
+
+### `yaml`
+A very rare need is to be able to convert a string which happens to be in YAML form into JSON, and this can be done via the `yaml` type cast keyword. For example - if a response data element or downloaded file is YAML and you need to use the data in subsequent steps. Also see [type conversion](#type-conversion).
+
+```cucumber
+* text foo =
   """
   name: John
   input:
@@ -1267,7 +1355,8 @@ For those who may prefer [YAML](http://yaml.org) as a simpler way to represent d
       name: Smith
       deleted: false
   """
-# the data is now JSON, so you can do JSON-things with it
+# yaml to json type conversion  
+* yaml foo = foo
 * match foo ==
   """
   {
@@ -1278,15 +1367,26 @@ For those who may prefer [YAML](http://yaml.org) as a simpler way to represent d
     }
   }
   """
-
-# yaml from a file (the extension matters), and the data-type of 'bar' would be JSON
-* def bar = read('data.yaml')
 ```
 
 ## CSV Files
 Karate can read `*.csv` files and will auto-convert them to JSON. A header row is always expected. See the section on [reading files](#reading-files) - and also this example [`dynamic-csv.feature`](karate-demo/src/test/java/demo/outline/dynamic-csv.feature), which shows off the convenience of [dynamic `Scenario Outline`-s](#dynamic-scenario-outline).
 
 In rare cases you may want to use a csv-file as-is and *not* auto-convert it to JSON. A good example is when you want to use a CSV file as the [request-body](#request) for a file-upload. You could get by by renaming the file-extension to say `*.txt` but an alternative is to use the [`karate.readAsString()`](#read-file-as-string) API.
+
+### `csv`
+Just like [`yaml`](#yaml), you may occasionally need to [convert a string](#type-conversion) which happens to be in CSV form into JSON, and this can be done via the `csv` keyword.
+
+```cucumber
+* text foo =
+    """
+    name,type
+    Billie,LOL
+    Bob,Wild
+    """
+* csv bar = foo
+* match bar == [{ name: 'Billie', type: 'LOL' }, { name: 'Bob', type: 'Wild' }]
+```
 
 ## JavaScript Functions
 JavaScript Functions are also 'native'. And yes, functions can take arguments.
@@ -1295,8 +1395,8 @@ JavaScript Functions are also 'native'. And yes, functions can take arguments.
 are **not** supported. Finally, especially when using stand-alone `*.js` files, you can use `fn` as the function name, so that your IDE does not complain about JavaScript syntax errors, e.g. `function fn(x){ return x + 1 }`
 
 ```cucumber
-* def greeter = function(name){ return 'hello ' + name }
-* assert greeter('Bob') == 'hello Bob'
+* def greeter = function(title, name) { return 'hello ' + title + ' ' + name }
+* assert greeter('Mr.', 'Bob') == 'hello Mr. Bob'
 ```
 
 > When JavaScript executes in Karate, the built-in [`karate` object](#the-karate-object) provides some commonly used utility functions. And with [Karate expressions](#karate-expressions), you can "dive into" JavaScript without needing to define a function - and [conditional logic](#conditional-logic) is a good example.
@@ -1373,6 +1473,12 @@ You can also [re-use other `*.feature`](#calling-other-feature-files) files from
 * def result = call read('classpath:some-reusable-steps.feature')
 ```
 
+When a *called* feature depends on some side-by-side resources such as JSON or JS files, you can use the `this:` prefix to ensure that relative paths work correctly - because by default Karate calculates relative paths from the "root" feature or the top-most "caller".
+
+```cucumber
+* def data = read('this:payload.json')
+```
+
 If a file does not end in `.json`, `.xml`, `.yaml`, `.js`, `.csv` or `.txt`, it is treated as a stream - which is typically what you would need for [`multipart`](#multipart-field) file uploads.
 
 ```cucumber
@@ -1409,6 +1515,14 @@ The rarely used `file:` prefix is also supported. You could use it for 'hard-cod
 * def payload = read('file:target/large.xml')
 ```
 
+To summarize the possible prefixes:
+
+Prefix | Description
+------ | -----------
+`classpath:` | relative to the [classpath](#classpath), recommended for re-usable features 
+`file:` | do not use this unless you know what you are doing, see above
+`this:` | when in a *called* feature, ensure that files are resolved relative to the current feature file
+
 Take a look at the [Karate Demos](karate-demo) for real-life examples of how you can use files for validating HTTP responses, like this one: [`read-files.feature`](karate-demo/src/test/java/demo/read/read-files.feature).
 
 ### Read File As String
@@ -1423,7 +1537,6 @@ Then status 202
 ```
 
 ## Type Conversion
-
 > Best practice is to stick to using only [`def`](#def) unless there is a very good reason to do otherwise.
 
 Internally, Karate will auto-convert JSON (and even XML) to Java `Map` objects. And JSON arrays would become Java `List`-s. But you will never need to worry about this internal data-representation most of the time.
@@ -1438,6 +1551,8 @@ So you have the following type markers you can use instead of [`def`](#def) (or 
 * <a name="type-json"><code>json</code></a> - convert XML, a map-like or list-like object, a string, or even a Java object into JSON
 * <a name="type-xml"><code>xml</code></a> - convert JSON, a map-like object, a string, or even a Java object into XML
 * <a name="type-xmlstring"><code>xmlstring</code></a> - specifically for converting the map-like Karate internal representation of XML into a string
+* <a name="type-csv"><code>csv</code></a> - convert a CSV string into JSON, see [`csv`](#csv)
+* <a name="type-yaml"><code>yaml</code></a> - convert a YAML string into JSON, see [`yaml`](#yaml)
 * <a name="type-bytes"><code>bytes</code></a> - convert to a byte-array, useful for binary payloads or comparisons, see [example](karate-demo/src/test/java/demo/websocket/echo.feature)
 * <a name="type-copy"><code>copy</code></a> - to clone a given payload variable reference (JSON, XML, Map or List), refer: [`copy`](#copy)
 
@@ -1698,7 +1813,11 @@ Note that any cookies returned in the HTTP response would be automatically set f
 Also refer to the built-in variable [`responseCookies`](#responsecookies) for how you can access and perform assertions on cookie data values.
 
 ## `form field` 
-HTML form fields would be URL-encoded when the HTTP request is submitted (by the [`method`](#method) step). You would typically use these to simulate a user sign-in and then grab a security token from the [`response`](#response). For example:
+HTML form fields would be URL-encoded when the HTTP request is submitted (by the [`method`](#method) step). You would typically use these to simulate a user sign-in and then grab a security token from the [`response`](#response).
+
+Note that the `Content-Type` header will be automatically set to: `application/x-www-form-urlencoded`. You just need to do a normal `POST` (or `GET`).
+
+For example:
 
 ```cucumber
 Given path 'login'
@@ -1813,7 +1932,7 @@ The single JSON argument needs to be in the form `{ field1: { read: 'file1.ext' 
 * set json.myFile1 = { read: 'test1.pdf', filename: 'upload-name1.pdf', contentType: 'application/pdf' }
 # if you have dynamic keys you can do this
 * def key = 'myFile2'
-* eval json[key] = { read: 'test2.pdf', filename: 'upload-name2.pdf', contentType: 'application/pdf' }
+* json[key] = { read: 'test2.pdf', filename: 'upload-name2.pdf', contentType: 'application/pdf' }
 And multipart files json
 ```
 
@@ -1862,6 +1981,8 @@ And retry until responseStatus == 200 && response.id > 3
 When method get
 ```
 
+> Note that it has to be a pure JavaScript expression - which means that `match` syntax such as `contains` will *not* work. But you can easily achieve any complex logic by [using the JS API](https://stackoverflow.com/a/55823180/143475).
+
 Refer to [`polling.feature`](karate-demo/src/test/java/demo/polling/polling.feature) for an example, and also see the alternative way to achieve [polling](#polling).
 
 # `configure`
@@ -1887,15 +2008,20 @@ You can adjust configuration settings for the HTTP client used by Karate using t
 `readTimeout` | integer | Set the read timeout (milliseconds). The default is 30000 (30 seconds).
 `proxy` | string | Set the URI of the HTTP proxy to use.
 `proxy` | JSON | For a proxy that requires authentication, set the `uri`, `username` and `password`, see example below. Also a `nonProxyHosts` key is supported which can take a list for e.g. `{ uri: 'http://my.proxy.host:8080',  nonProxyHosts: ['host1', 'host2']}`
+`localAddress` | string | see [`karate-gatling`](karate-gatling#configure-localaddress)
 `charset` | string | The charset that will be sent in the request `Content-Type` which defaults to `utf-8`. You typically never need to change this, and you can over-ride (or disable) this per-request if needed via the [`header`](#header) keyword ([example](karate-demo/src/test/java/demo/headers/content-type.feature)).
 `retry` | JSON | defaults to `{ count: 3, interval: 3000 }` - see [`retry until`](#retry-until)
+`outlineVariablesAuto` | boolean | defaults to `true`, whether each key-value pair in the `Scenario Outline` example-row is automatically injected into the context as a variable (and not just `__row`), see [`Scenario Outline` Enhancements](#scenario-outline-enhancements)
 `lowerCaseResponseHeaders` | boolean | Converts every key and value in the [`responseHeaders`](#responseheaders) to lower-case which makes it easier to validate for e.g. using [`match header`](#match-header) (default `false`) [(example)](karate-demo/src/test/java/demo/headers/content-type.feature).
-`httpClientClass` | string | See [karate-mock-servlet](karate-mock-servlet)
-`httpClientInstance` | Java Object | See [karate-mock-servlet](karate-mock-servlet)
-`userDefined` | JSON | See [karate-mock-servlet](karate-mock-servlet)
-`responseHeaders` | JSON / JS function | See [karate-netty](karate-netty#configure-responseheaders)
-`cors` | boolean | See [karate-netty](karate-netty##configure-cors)
+`httpClientClass` | string | See [`karate-mock-servlet`](karate-mock-servlet)
+`httpClientInstance` | Java Object | See [`karate-mock-servlet`](karate-mock-servlet)
+`userDefined` | JSON | See [`karate-mock-servlet`](karate-mock-servlet)
+`responseHeaders` | JSON / JS function | See [`karate-netty`](karate-netty#configure-responseheaders)
+`cors` | boolean | See [`karate-netty`](karate-netty#configure-cors)
+`driver` | JSON | See [UI Automation](karate-core)
+`driverTarget` | JSON / Java Object | See [`configure driverTarget`](karate-core#configure-drivertarget)
 `mockServerFallbackHttpVersion` | string | See [karate-netty](karate-netty##configure-mockServerFallbackHttpVersion)
+
 
 Examples:
 ```cucumber
@@ -1959,19 +2085,29 @@ Also referred to as "mutual auth" - if your API requires that clients present an
 
 Key | Type | Required? | Description
 ---- | ----- | ------ | ----------
-`keyStore` | string | required | path to file containing public and private keys for your client certificate.
-`keyStorePassword` | string | required | password for keyStore file.
-`keyStoreType` | string | required | Format of the keyStore file.  Allowed keystore types are as described in the [Java `KeyStore` docs](https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyStore).
+`keyStore` | string | optional | path to file containing public and private keys for your client certificate.
+`keyStorePassword` | string | optional | password for keyStore file.
+`keyStoreType` | string | optional | Format of the keyStore file.  Allowed keystore types are as described in the [Java `KeyStore` docs](https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyStore).
 `trustStore` | string | optional | path to file containing the trust chain for your server certificate.
 `trustStorePassword` | string | optional | password for trustStore file.
 `trustStoreType` | string | optional | Format of the trustStore file.  Allowed keystore types are as described in the [Java `KeyStore` docs](https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyStore).
-`trustAll` | boolean | optional | if all server certificates should be considered trusted.  Default is `true` and if the above 3 keys are present will allow self-signed certificates. If `false`, will expect the whole chain in the `trustStore` or use what is available in the environment.
+`trustAll` | boolean | optional | if all server certificates should be considered trusted. Default value is `false`. If `true` will allow self-signed certificates. If `false`, will expect the whole chain in the `trustStore` or use what is available in the environment.
 `algorithm` | string | optional | force the SSL algorithm to one of [these values](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#SSLContext). Default is `TLS`.  
 
 Example:  
 ```
 # enable X509 certificate authentication with PKCS12 file 'certstore.pfx' and password 'certpassword'
 * configure ssl = { keyStore: 'classpath:certstore.pfx', keyStorePassword: 'certpassword', keyStoreType: 'pkcs12' };
+```
+
+```
+# trust all server certificates, in the feature file
+* configure ssl = { trustAll: true };
+```
+
+```
+# trust all server certificates, global configuration in 'karate-config.js'
+karate.configure('ssl', { trustAll: true });
 ```
 
 # Payload Assertions
@@ -2045,9 +2181,13 @@ In case you were wondering, variables (and even expressions) are supported on th
 * match foo == bar
 ```
 
-If you are wondering about the finer details of the `match` syntax, the left-hand-side has to be either a variable name, or a 'named' JsonPath or XPath expression. And the right-hand-side can be any valid [Karate expression](#karate-expressions).
+If you are wondering about the finer details of the `match` syntax, the left-hand-side has to be either a 
+* variable name - e.g. `foo`
+* a 'named' JsonPath or XPath expression - e.g. `foo.bar`
+* any valid function or method call - e.g. `foo.bar()` or `foo.bar('hello').baz`
+* or anything wrapped in parentheses which will be evaluated - e.g. `(foo + bar)` or `(42)`
 
-> Refer to the section on [JsonPath short-cuts](#jsonpath-short-cuts) for a deeper understanding of 'named' JsonPath expressions in Karate.
+And the right-hand-side can be any valid [Karate expression](#karate-expressions). Refer to the section on [JsonPath short-cuts](#jsonpath-short-cuts) for a deeper understanding of 'named' JsonPath expressions in Karate.
 
 ### `match !=` (not equals)
 The 'not equals' operator `!=` works as you would expect:
@@ -2353,6 +2493,14 @@ In some cases where the response JSON is wildly dynamic, you may want to only ch
 # * match foo == { bar:1, baz: 'hello' }
 ```
 
+Note that `match contains` will "recurse", so any nested JSON chunks will also be matched using `match contains`:
+
+```cucumber
+* def original = { a: 1, b: 2, c: 3, d: { a: 1, b: 2 } }
+* def expected = { a: 1, c: 3, d: { b: 2 } }
+* match original contains expected
+```
+
 Also note that [`match contains any`](#match-contains-any) is possible for JSON objects as well as JSON arrays.
 
 ### (not) `!contains`
@@ -2407,6 +2555,9 @@ Then match cat.kittens[*].id contains 23
 Then match cat.kittens[*].id contains [42]
 Then match cat.kittens[*].id contains [23, 42]
 Then match cat.kittens[*].id contains [42, 23]
+
+# the .. operator is great because it matches nodes at any depth in the JSON "tree"
+Then match cat..name == ['Billie', 'Bob', 'Wild']
 
 # and yes, you can assert against nested objects within JSON arrays !
 Then match cat.kittens contains [{ id: 42, name: 'Wild' }, { id: 23, name: 'Bob' }]
@@ -2691,7 +2842,9 @@ JsonPath [filter expressions](https://github.com/json-path/JsonPath#filter-opera
 You usually won't need this, but the second-last line above shows how the `karate` object can be used to [evaluate JsonPath](#karate-jsonpath) if the filter expression depends on a variable. If you find yourself struggling to write [dynamic JsonPath filters](https://stackoverflow.com/a/52741196/143475), look at [`karate.filter()`](#karate-filter) as an alternative, described just below.
 
 ## JSON Transforms
-Karate supports the following [functional-style](https://en.wikipedia.org/wiki/Functional_programming) operations via the JS API -  [`karate.map()`](#karate-map), [`karate.filter()`](#karate-filter) and [`karate.forEach()`](#karate-foreach). They can be very useful in some situations. A [good example](https://stackoverflow.com/a/53120851/143475) is when you have the *expected* data available as ready-made JSON but it is in a different "shape" from the *actual* data or HTTP `response`.
+Karate supports the following [functional-style](https://en.wikipedia.org/wiki/Functional_programming) operations via the JS API -  [`karate.map()`](#karate-map), [`karate.filter()`](#karate-filter) and [`karate.forEach()`](#karate-foreach). They can be very useful in some situations. A [good example](https://stackoverflow.com/a/53120851/143475) is when you have the *expected* data available as ready-made JSON but it is in a different "shape" from the *actual* data or HTTP `response`. There is also a [`karate.mapWithKey()`](#karate-mapwithkey) for a common need - which is to convert an array of primitives into an array of objects, which is the form that [data driven features](#data-driven-features) expect.
+
+A few more useful "transforms" are to select a sub-set of key-value pairs using [`karate.filterKeys()`](#karate-filterkeys), merging 2 or more JSON-s using [`karate.merge()`](#karate-merge) and combining 2 or more arrays (or objects) into a single array using [`karate.append()`](#karate-append). And [`karate.appendTo()`](#karate-appendto) is for updating an existing variable (the equivalent of `array.push()` in JavaScript), which is especially useful in the body of a `karate.forEach()`.
 
 > Note that a single JS function is sufficient to transform a given JSON object into a completely new one, and you can use complex conditional logic if needed.
 
@@ -2708,6 +2861,11 @@ Scenario: convert an array into a different shape
     * def after = karate.map(before, fun)
     * match after == [{ bar: 1 }, { bar: 2 }, { bar: 3 }]
 
+Scenario: convert array of primitives into array of objects
+    * def list = [ 'Bob', 'Wild', 'Nyan' ]
+    * def data = karate.mapWithKey(list, 'name')
+    * match data == [{ name: 'Bob' }, { name: 'Wild' }, { name: 'Nyan' }]
+
 Scenario: karate filter operation
     * def fun = function(x){ return x % 2 == 0 }
     * def list = [1, 2, 3, 4]
@@ -2718,12 +2876,56 @@ Scenario: forEach works even on object key-values, not just arrays
     * def keys = []
     * def vals = []
     * def idxs = []
-    * def fun = function(x, y, i){ keys.add(x); vals.add(y); idxs.add(i) }
+    * def fun = 
+    """
+    function(x, y, i) { 
+      karate.appendTo(keys, x); 
+      karate.appendTo(vals, y); 
+      karate.appendTo(idxs, i); 
+    }
+    """
     * def map = { a: 2, b: 4, c: 6 }
-    * eval karate.forEach(map, fun)
+    * karate.forEach(map, fun)
     * match keys == ['a', 'b', 'c']
     * match vals == [2, 4, 6]
     * match idxs == [0, 1, 2]
+
+Scenario: filterKeys
+    * def schema = { a: '#string', b: '#number', c: '#boolean' }
+    * def response = { a: 'x', c: true }
+    # very useful for validating a response against a schema "super-set"
+    * match response == karate.filterKeys(schema, response)
+    * match karate.filterKeys(response, 'b', 'c') == { c: true }
+    * match karate.filterKeys(response, ['a', 'b']) == { a: 'x' }
+
+Scenario: merge
+    * def foo = { a: 1 }
+    * def bar = karate.merge(foo, { b: 2 })
+    * match bar == { a: 1, b: 2 }
+
+Scenario: append
+    * def foo = [{ a: 1 }]
+    * def bar = karate.append(foo, { b: 2 })
+    * match bar == [{ a: 1 }, { b: 2 }]
+```
+
+### Loops
+Given the examples above, it has to be said that a best practice with Karate is to avoid JavaScript `for` loops as far as possible. A common requirement is to build an array with `n` elements or do something `n` times where `n` is an integer (that could even be a variable reference). This is easily achieved with the [`karate.repeat()`](#karate-repeat) API:
+
+```cucumber
+* def fun = function(i){ return i * 2 }
+* def foo = karate.repeat(5, fun)
+* match foo == [0, 2, 4, 6, 8]
+
+* def foo = []
+* def fun = function(i){ karate.appendTo(foo, i) }
+* karate.repeat(5, fun)
+* match foo == [0, 1, 2, 3, 4]
+
+# generate test data easily
+* def fun = function(i){ return { name: 'User ' + (i + 1) } }
+* def foo = karate.repeat(3, fun)
+* match foo == [{ name: 'User 1' }, { name: 'User 2' }, { name: 'User 3' }]
 ```
 
 ## XPath Functions
@@ -2875,6 +3077,17 @@ Then status 201
 And assert responseTime < 1000
 ```
 
+## `responseType`
+Karate will attempt to parse the raw HTTP response body as JSON or XML and make it available as the [`response`](#response) value. If parsing fails, Karate will log a warning and the value of `response` will then be a plain string. You can still perform string comparisons such as a [`match contains`](#match-text-or-binary) and look for error messages etc. In rare cases, you may want to check what the "type" of the `response` is and it can be one of 3 different values: `json`, `xml` and `string`.
+
+So if you really wanted to assert that the HTTP response body is well-formed JSON or XML you can do this:
+
+```cucumber
+When method post
+Then status 201
+And match responseType == 'json'
+```
+
 ## `requestTimeStamp`
 Very rarely used - but you can get the Java system-time (for the current [`response`](#response)) at the point when the HTTP request was initiated (the value of `System.currentTimeMillis()`) which can be used for detailed logging or custom framework / stats calculations.
 
@@ -2934,7 +3147,64 @@ Notice how once the `authToken` variable is initialized, it is used by the above
 
 If a few steps in your flow need to temporarily change (or completely bypass) the currently-set header-manipulation scheme, just update `configure headers` to a new value (or set it to `null`) in the middle of a script. Then use the [`header`](#header) keyword to do a custom 'over-ride' if needed.
 
-The [karate-demo](karate-demo) has an example showing various ways to `configure` or set headers: [`headers.feature`](karate-demo/src/test/java/demo/headers/headers.feature) 
+The [karate-demo](karate-demo) has an example showing various ways to `configure` or set headers: [`headers.feature`](karate-demo/src/test/java/demo/headers/headers.feature)
+
+# The `karate` object
+A JavaScript function or [Karate expression](#karate-expressions) at runtime has access to a utility object in a variable named: `karate`.  This provides the following methods:
+
+Operation | Description
+--------- | -----------
+<a name="karate-abort"><code>karate.abort()</code></a> | you can prematurely exit a `Scenario` by combining this with [conditional logic](#conditional-logic) like so: `* if (condition) karate.abort()` - please use [sparingly](https://martinfowler.com/articles/nonDeterminism.html) !
+<a name="karate-append"><code>karate.append(... items)</code></a> | useful to create lists out of items (which can be lists as well), see [JSON transforms](#json-transforms)
+<a name="karate-appendto"><code>karate.appendTo(name, ... items)</code></a> | useful to append to a list-like variable (that has to exist) in scope, see [JSON transforms](#json-transforms)
+<a name="karate-call"><code>karate.call(fileName, [arg])</code></a> | invoke a [`*.feature` file](#calling-other-feature-files) or a [JavaScript function](#calling-javascript-functions) the same way that [`call`](#call) works (with an optional solitary argument)
+<a name="karate-callsingle"><code>karate.callSingle(fileName, [arg])</code></a> | like the above, but guaranteed to run **only once** even across multiple features *and* parallel threads (recommended only for advanced users) - refer to this example: [`karate-config.js`](karate-demo/src/test/java/karate-config.js) / [`headers-single.feature`](karate-demo/src/test/java/demo/headers/headers-single.feature)
+<a name="karate-configure"><code>karate.configure(key, value)</code></a> | does the same thing as the [`configure`](#configure) keyword, and a very useful example is to do `karate.configure('connectTimeout', 5000);` in [`karate-config.js`](#configuration) - which has the 'global' effect of not wasting time if a connection cannot be established within 5 seconds
+<a name="karate-embed"><code>karate.embed(object, mimeType)</code></a> | embeds the object (can be raw bytes or an image) into the JSON report output, see this [example](karate-demo/src/test/java/demo/embed/embed.feature)
+<a name="karate-env"><code>karate.env</code></a> | gets the value (read-only) of the environment property 'karate.env', and this is typically used for bootstrapping [configuration](#configuration)
+<a name="karate-eval"><code>karate.eval(expression)</code></a> | for really advanced needs, you can programmatically generate a snippet of JavaScript which can be evaluated at run-time, you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature)
+<a name="karate-exec"><code>karate.exec(command)</code></a> | convenient way to execute an OS specific command and return the console output, useful for calling non-Java code (that can even return data) or for starting user-interfaces to be automated
+<a name="karate-filter"><code>karate.filter(list, predicate)</code></a> | functional-style 'filter' operation useful to filter list-like objects (e.g. JSON arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index]) that returns a `boolean`
+<a name="karate-filterkeys"><code>karate.filterKeys(map, keys)</code></a> | extracts a sub-set of key-value pairs from the first argument, the second argument can be a list (or varargs) of keys - or even another JSON where only the keys would be used for extraction, [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature)
+`karate.forEach(list, function)` | functional-style 'loop' operation useful to traverse list-like (or even map-like) objects (e.g. JSON / arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index]) for lists and (key, [value], [index]) for JSON / maps
+<a name="karate-get"><code>karate.get(name, [default])</code></a> | get the value of a variable by name (or JsonPath expression), if not found - this returns `null` which is easier to handle in JavaScript (than `undefined`), and an optional second argument can be used to return a "default" value, very useful to set variables in called features that have not been pre-defined
+<a name="karate-info"><code>karate.info</code></a> | within a test (or within the [`afterScenario`](#configure) function if configured) you can access metadata such as the `Scenario` name, refer to this example: [`hooks.feature`](karate-demo/src/test/java/demo/hooks/hooks.feature)
+<a name="karate-jsonpath"><code>karate.jsonPath(json, expression)</code></a> | brings the power of [JsonPath](https://github.com/json-path/JsonPath) into JavaScript, and you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature).
+<a name="karate-keysof"><code>karate.keysOf(object)</code></a> | returns only the keys of a map-like object
+<a name="karate-listen"><code>karate.listen(timeout)</code></a> | wait until [`karate.signal(result)`](#karate-signal) has been called or time-out after `timeout` milliseconds, see [async](#async)
+<a name="karate-log"><code>karate.log(... args)</code></a> | log to the same logger (and log file) being used by the parent process, logging can be suppressed with [`configure printEnabled`](#configure) set to `false`
+<a name="karate-lowercase"><code>karate.lowerCase(object)</code></a> | useful to brute-force all keys and values in a JSON or XML payload to lower-case, useful in some cases, see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/lower-case.feature)
+<a name="karate-map"><code>karate.map(list, function)</code></a> | functional-style 'map' operation useful to transform list-like objects (e.g. JSON arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index])
+<a name="karate-mapwithkey"><code>karate.mapWithKey(list, string)</code></a> | convenient for the common case of transforming an array of primitives into an array of objects, see [JSON transforms](#json-transforms)
+<a name="karate-match"><code>karate.match(actual, expected)</code></a> | brings the power of the *fuzzy* [`match`](#match) syntax into Karate-JS, returns a JSON in the form `{ pass: '#boolean', message: '#string' }` and you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature).
+<a name="karate-merge"><code>karate.merge(... maps)</code></a> | useful to merge the key-values of two (or more) JSON (or map-like) objects, see [JSON transforms](#json-transforms)
+<a name="karate-os"><code>karate.os</code></a> | returns the operating system details as JSON, for e.g. `{ type: 'macosx', name: 'Mac OS X' }` - useful for writing conditional logic, the possible `type`-s being: `macosx`, `windows`, `linux` and `unknown`
+<a name="karate-pretty"><code>karate.pretty(value)</code></a> | return a 'pretty-printed', nicely indented string representation of the JSON value, also see: [`print`](#print)
+<a name="karate-prettyxml"><code>karate.prettyXml(value)</code></a> | return a 'pretty-printed', nicely indented string representation of the XML value, also see: [`print`](#print)
+<a name="karate-prevrequest"><code>karate.prevRequest</code></a> | for advanced users, you can inspect the *actual* HTTP request after it happens, useful if you are writing a framework over Karate, refer to this example: [`request.feature`](karate-demo/src/test/java/demo/request/request.feature)
+<a name="karate-properties"><code>karate.properties[key]</code></a> | get the value of any Java system-property by name, useful for [advanced custom configuration](#dynamic-port-numbers)
+<a name="karate-read"><code>karate.read(filename)</code></a> | the same [`read()`](#reading-files) function - which is pre-defined even within JS blocks, so there is no need to ever do `karate.read()`, and just `read()` is sufficient
+<a name="karate-readasstring"><code>karate.readAsString(filename)</code></a> | [rarely used](#read-file-as-string), behaves exactly like [`read`](#reading-files) - but does *not* auto convert to JSON or XML
+<a name="karate-remove"><code>karate.remove(name, path)</code></a> | very rarely used - when needing to perform conditional removal of XML nodes. Behaves the same way as the [`remove`](#remove) keyword.
+<a name="karate-repeat"><code>karate.repeat(count, function)</code></a> | useful for building an array with `count` items or doing something `count` times, refer this [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/repeat.feature). Also see [loops](#loops).
+<a name="karate-set"><code>karate.set(name, value)</code></a> | sets the value of a variable (immediately), which may be needed in case any other routines (such as the [configured headers](#configure-headers)) depend on that variable
+<a name="karate-setall"><code>karate.set(object)</code></a> | where the single argument is expected to be a `Map` or JSON-like, and will perform the above `karate.set()` operation for all key-value pairs in one-shot, see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/set.feature)
+<a name="karate-setpath"><code>karate.set(name, path, value)</code></a> | only needed when you need to conditionally build payload elements, especially XML. This is best explained via [an example](karate-junit4/src/test/java/com/intuit/karate/junit4/xml/xml.feature#L211), and it behaves the same way as the [`set`](#set) keyword. Also see [`eval`](#eval).
+<a name="karate-setxml"><code>karate.setXml(name, xmlString)</code></a> | rarely used, refer to the example above
+<a name="karate-signal"><code>karate.signal(result)</code></a> | trigger an event that [`karate.listen(timeout)`](#karate-listen) is waiting for, and pass the data, see [async](#async)
+<a name="karate-sizeof"><code>karate.sizeOf(object)</code></a> | returns the size of the map-like or list-like object
+<a name="karate-stop"><code>karate.stop()</code></a> | will pause the test execution until a socket connection is made to the port logged to the console, useful for troubleshooting UI tests without using a [de-bugger](https://github.com/intuit/karate/wiki/Karate-UI), of course - *NEVER* forget to remove this after use ! 
+<a name="karate-target"><code>karate.target(object)</code></a> | currently for web-ui automation only, see [target lifecycle](karate-core#target-lifecycle)
+<a name="karate-tags"><code>karate.tags</code></a> | for advanced users - scripts can introspect the tags that apply to the current scope, refer to this example: [`tags.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/tags.feature)
+<a name="karate-tagvalues"><code>karate.tagValues</code></a> | for even more advanced users - Karate natively supports tags in a `@name=val1,val2` format, and there is an inheritance mechanism where `Scenario` level tags can over-ride `Feature` level tags, refer to this example: [`tags.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/tags.feature)
+<a name="karate-tobean"><code>karate.toBean(json, className)</code></a> | converts a JSON string or map-like object into a Java object, given the Java class name as the second argument, refer to this [file](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/type-conv.feature) for an example
+<a name="karate-tojson"><code>karate.toJson(object)</code></a> | converts a Java object into JSON, and `karate.toJson(object, true)` will strip all keys that have `null` values from the resulting JSON, convenient for unit-testing Java code, see [example](karate-demo/src/test/java/demo/unit/cat.feature)
+<a name="karate-tolist"><code>karate.toList(object)</code></a> | rarely used - when still within a JS block, you need to convert a JSON array into a Java `List`
+<a name="karate-tomap"><code>karate.toMap(object)</code></a> | rarely used - when still within a JS block, you need to convert a JSON object into a Java `Map`, or you are setting up [complex global variables](#restrictions-on-global-variables)
+<a name="karate-valuesof"><code>karate.valuesOf(object)</code></a> | returns only the values of a map-like object (or itself if a list-like object)
+<a name="karate-websocket"><code>karate.webSocket(url, handler)</code></a> | see [websocket](#websocket)
+<a name="karate-write"><code>karate.write(object, path)</code></a> | *normally not recommended, please [read this first](https://stackoverflow.com/a/54593057/143475)* - writes the bytes of `object` to a path which will *always* be relative to the "build" directory (typically `target`), see this example: [`embed-pdf.js`](karate-demo/src/test/java/demo/embed/embed-pdf.js) - and this method returns a `java.io.File` reference to the file created / written to
+<a name="karate-xmlpath"><code>karate.xmlPath(xml, expression)</code></a> | Just like [`karate.jsonPath()`](#karate-jsonpath) - but for XML, and allows you to use dynamic XPath if needed, see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/xml/xml.feature).
 
 # Code Reuse / Common Routines
 ## `call`
@@ -2958,6 +3228,8 @@ Background:
 Scenario: some scenario
   # main test steps
 ```
+
+> Note that [`def`](#def) can be used to *assign* a __feature__ to a variable. For example look at how "`creator`" has been defined in the `Background` in [this example](karate-demo/src/test/java/demo/calldynamic/call-dynamic-json.feature), and used later in a `call` statement. This is very close to how "custom keywords" work in other frameworks. See this other example for more ideas: [`dsl.feature`](karate-demo/src/test/java/demo/dsl/dsl.feature).
 
 The contents of `my-signin.feature` are shown below. A few points to note:
 * Karate creates a new 'context' for the feature file being invoked but passes along all variables and configuration. This means that all your [config variables](#configuration) and [`configure` settings](#configure) would be available to use, for example `loginUrlBase` in the example below. 
@@ -3053,9 +3325,19 @@ Although all properties in the passed JSON-like argument are 'unpacked' into the
 Variable  | Refers To
 --------- | ------                               
 | `__arg`   | the single `call` (or [`callonce`](#callonce)) argument, will be `null` if there was none         
-| `__loop`  | the current iteration index if being called in a loop, will be `-1` if not
+| `__loop`  | the current iteration index (starts from 0) if being called in a loop, will be `-1` if not
 
 Refer to this [demo feature](karate-demo) for an example: [`kitten-create.feature`](karate-demo/src/test/java/demo/calltable/kitten-create.feature)
+
+### Default Values
+Some users need "callable" features that are re-usable even when variables have not been defined by the calling feature. Normally an undefined variable results in nasty JavaScript errors. But there is an elegant way you can specify a default value using the [`karate.get()`](#karate-get) API:
+
+```cucumber
+# if foo is not defined, it will default to 42
+* def foo = karate.get('foo', 42)
+```
+
+> A word of caution: we recommend that you should not over-use Karate's capability of being able to re-use features. Re-use can sometimes result in negative benefits - especially when applied to test-automation. Prefer readability over re-use. See this for an [example](https://stackoverflow.com/a/54126724/143475).
 
 ### `copy`
 For a [`call`](#call) (or [`callonce`](#callonce)) - payload / data structures (JSON, XML, Map-like or List-like) variables are 'passed by reference' which means that steps within the 'called' feature can update or 'mutate' them, for e.g. using the [`set`](#set) keyword. This is actually the intent most of the time and is convenient. If you want to pass a 'clone' to a 'called' feature, you can do so using the rarely used `copy` keyword that works very similar to [type conversion](#type-conversion). This is best explained in the last scenario of this example: [`copy-caller.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/copy-caller.feature)
@@ -3071,45 +3353,6 @@ Examples of [defining and using JavaScript functions](#javascript-functions) app
 In real-life scripts, you would typically also use this capability of Karate to [`configure headers`](#configure-headers) where the specified JavaScript function uses the variables that result from a [sign in](#calling-other-feature-files) to manipulate headers for all subsequent HTTP requests. And it is worth mentioning that the Karate [configuration 'bootstrap'](#configuration) routine is itself a JavaScript function.
 
 > Also refer to the [`eval`](#eval) keyword for a simpler way to execute arbitrary JavaScript that can be useful in some situations.
-
-### The `karate` object
-A JavaScript function or [Karate expression](#karate-expressions) at runtime has access to a utility object in a variable named: `karate`.  This provides the following methods:
-
-Operation | Description
---------- | -----------
-<a name="karate-abort"><code>karate.abort()</code></a> | you can prematurely exit a `Scenario` by combining this with [conditional logic](#conditional-logic) like so: `* eval if (condition) karate.abort()` - please use [sparingly](https://martinfowler.com/articles/nonDeterminism.html) !
-<a name="karate-call"><code>karate.call(fileName, [arg])</code></a> | invoke a [`*.feature` file](#calling-other-feature-files) or a [JavaScript function](#calling-javascript-functions) the same way that [`call`](#call) works (with an optional solitary argument)
-<a name="karate-callsingle"><code>karate.callSingle(fileName, [arg])</code></a> | like the above, but guaranteed to run **only once** even across multiple features *and* parallel threads (recommended only for advanced users) - refer to this example: [`karate-config.js`](karate-demo/src/test/java/karate-config.js) / [`headers-single.feature`](karate-demo/src/test/java/demo/headers/headers-single.feature)
-<a name="karate-configure"><code>karate.configure(key, value)</code></a> | does the same thing as the [`configure`](#configure) keyword, and a very useful example is to do `karate.configure('connectTimeout', 5000);` in [`karate-config.js`](#configuration) - which has the 'global' effect of not wasting time if a connection cannot be established within 5 seconds
-<a name="karate-embed"><code>karate.embed(object, mimeType)</code></a> | embeds the object (can be raw bytes or an image) into the JSON report output, see this [example](karate-demo/src/test/java/demo/embed/embed.feature)
-<a name="karate-env"><code>karate.env</code></a> | gets the value (read-only) of the environment property 'karate.env', and this is typically used for bootstrapping [configuration](#configuration)
-<a name="karate-eval"><code>karate.eval(expression)</code></a> | for really advanced needs, you can programmatically generate a snippet of JavaScript which can be evaluated at run-time, you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature)
-<a name="karate-filter"><code>karate.filter(list, predicate)</code></a> | functional-style 'filter' operation useful to filter list-like objects (e.g. JSON arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index]) that returns a `boolean`
-`karate.forEach(list, function)` | functional-style 'loop' operation useful to traverse list-like (or even map-like) objects (e.g. JSON / arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index]) for lists and (key, [value], [index]) for JSON / maps
-<a name="karate-get"><code>karate.get(name)</code></a> | get the value of a variable by name (or JsonPath expression), if not found - this returns `null` which is easier to handle in JavaScript (than `undefined`)
-<a name="karate-info"><code>karate.info</code></a> | within a test (or within the [`afterScenario`](#configure) function if configured) you can access metadata such as the `Scenario` name, refer to this example: [`hooks.feature`](karate-demo/src/test/java/demo/hooks/hooks.feature)
-<a name="karate-jsonpath"><code>karate.jsonPath(json, expression)</code></a> | brings the power of [JsonPath](https://github.com/json-path/JsonPath) into JavaScript, and you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature).
-<a name="karate-listen"><code>karate.listen(timeout)</code></a> | wait until [`karate.signal(result)`](#karate-signal) has been called or time-out after `timeout` milliseconds. see examples: [websocket](karate-demo/src/test/java/demo/websocket/websocket.feature) / [message-queue](karate-demo/src/test/java/mock/contract/payment-service.feature)
-<a name="karate-log"><code>karate.log(... args)</code></a> | log to the same logger (and log file) being used by the parent process, logging can be suppressed with [`configure printEnabled`](#configure) set to `false`
-<a name="karate-lowercase"><code>karate.lowerCase(object)</code></a> | useful to brute-force all keys and values in a JSON or XML payload to lower-case, useful in some cases, see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/lower-case.feature)
-<a name="karate-map"><code>karate.map(list, function)</code></a> | functional-style 'map' operation useful to transform list-like objects (e.g. JSON arrays), see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature), the second argument has to be a JS function (item, [index])
-<a name="karate-match"><code>karate.match(actual, expected)</code></a> | brings the power of the *fuzzy* [`match`](#match) syntax into Karate-JS, returns a JSON in the form `{ pass: '#boolean', message: '#string' }` and you can find an example [here](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/js-arrays.feature).
-<a name="karate-pretty"><code>karate.pretty(value)</code></a> | return a 'pretty-printed', nicely indented string representation of the JSON value, also see: [`print`](#print)
-<a name="karate-prettyxml"><code>karate.prettyXml(value)</code></a> | return a 'pretty-printed', nicely indented string representation of the XML value, also see: [`print`](#print)
-<a name="karate-prevrequest"><code>karate.prevRequest</code></a> | for advanced users, you can inspect the *actual* HTTP request after it happens, useful if you are writing a framework over Karate, refer to this example: [`request.feature`](karate-demo/src/test/java/demo/request/request.feature)
-<a name="karate-properties"><code>karate.properties[key]</code></a> | get the value of any Java system-property by name, useful for [advanced custom configuration](#dynamic-port-numbers)
-<a name="karate-read"><code>karate.read(filename)</code></a> | read from a file, behaves exactly like [`read`](#reading-files)
-<a name="karate-readasstring"><code>karate.readAsString(filename)</code></a> | [rarely used](#read-file-as-string), behaves exactly like [`read`](#reading-files) - but does *not* auto convert to JSON or XML
-<a name="karate-remove"><code>karate.remove(name, path)</code></a> | very rarely used - when needing to perform conditional removal of XML nodes. Behaves the same way as the [`remove`](#remove) keyword.
-<a name="karate-set"><code>karate.set(name, value)</code></a> | sets the value of a variable (immediately), which may be needed in case any other routines (such as the [configured headers](#configure-headers)) depend on that variable
-<a name="karate-setpath"><code>karate.set(name, path, value)</code></a> | only needed when you need to conditionally build payload elements, especially XML. This is best explained via [an example](karate-junit4/src/test/java/com/intuit/karate/junit4/xml/xml.feature#L211), and it behaves the same way as the [`set`](#set) keyword. Also see [`eval`](#eval).
-<a name="karate-setxml"><code>karate.setXml(name, xmlString)</code></a> | rarely used, refer to the example above
-<a name="karate-signal"><code>karate.signal(result)</code></a> | trigger an event that [`karate.listen(timeout)`](#karate-listen) is waiting for, and pass the data, see examples: [websocket](karate-demo/src/test/java/demo/websocket/websocket.feature) / [message-queue](karate-demo/src/test/java/mock/contract/payment-service.feature)
-<a name="karate-tags"><code>karate.tags</code></a> | for advanced users - scripts can introspect the tags that apply to the current scope, refer to this example: [`tags.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/tags.feature)
-<a name="karate-tagvalues"><code>karate.tagValues</code></a> | for even more advanced users - Karate natively supports tags in a `@name=val1,val2` format, and there is an inheritance mechanism where `Scenario` level tags can over-ride `Feature` level tags, refer to this example: [`tags.feature`](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/tags.feature)
-<a name="karate-tobean"><code>karate.toBean(json, className)</code></a> | converts a JSON string or map-like object into a Java object, given the Java class name as the second argument, refer to this [file](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/type-conv.feature) for an example
-<a name="karate-websocket"><code>karate.webSocket(url, handler)</code></a> | start a [websocket](#async) instance that can be used to send messages or listen for one, see [example](karate-demo/src/test/java/demo/websocket/echo.feature)
-<a name="karate-xmlpath"><code>karate.xmlPath(xml, expression)</code></a> | Just like [`karate.jsonPath()`](#karate-jsonpath) - but for XML, and allows you to use dynamic XPath if needed, see [example](karate-junit4/src/test/java/com/intuit/karate/junit4/xml/xml.feature).
 
 ### JS function argument rules for `call`
 When using `call` (or [`callonce`](#callonce)), only one argument is allowed. But this does not limit you in any way, because similar to how you can [call `*.feature files`](#calling-other-feature-files), you can pass a whole JSON object as the argument. In the case of the `call` of a JavaScript function, you can also pass a JSON array or a primitive (string, number, boolean) as the solitary argument, and the function implementation is expected to handle whatever is passed.
@@ -3162,6 +3405,24 @@ Shared | [`call-updates-config.feature`](karate-demo/src/test/java/demo/headers/
 
 > Once you get comfortable with Karate, you can consider moving your authentication flow into a 'global' one-time flow using [`karate.callSingle()`](#karate-callsingle), think of it as '[`callonce`](#callonce) on steroids'.
 
+#### `call` vs `read()`
+Since this is a frequently asked question, the different ways of being able to re-use code (or data) are summarized below.
+
+Code | Description
+---- | -----------
+`* def login = read('login.feature')`<br/>`* call login` | [Shared Scope](#shared-scope), and the <br/>`login` variable can be re-used
+`* call read('login.feature')` | short-cut for the above <br/>without needing a variable
+`* def credentials = read('credentials.json')`<br/>`* def login = read('login.feature')`<br/>`* call login credentials` | Note how using [`read()`](#reading-files) <br/>for a JSON file returns *data* - <br/>not "callable" code, and here it is <br/>used as the [`call`](#call) argument
+`* call read('login.feature') read('credentials.json')` | You *can* do this in theory, <br/>but it is not as readable as the above
+`* karate.call('login.feature')` | The [JS API](#karate-call) allows you to do this, <br/>but this will *not* be [Shared Scope](#shared-scope)
+`* def result = call read('login.feature')` | [`call`](#call) result assigned to a variable <br/>and *not* [Shared Scope](#shared-scope)
+`* def result = karate.call('login.feature')` | exactly equivalent to the above !
+`* def credentials = read('credentials.json')`<br/>`* def result = call read('login.feature') credentials` | like the above, <br/>but with a [`call`](#call) argument
+`* def credentials = read('credentials.json')`<br/>`* def result = karate.call('login.feature', credentials)` | like the above, but in [JS API](#karate-call) form, <br/>the advantage of the above form is <br/>that using an in-line argument is less <br/>"cluttered" (see next row)
+`* def login = read('login.feature')`<br/>`* def result = call login { user: 'john', password: 'secret' }` | using the `call` keyword makes <br/>passing an in-line JSON argument <br/>more "readable"
+`* call read 'credentials.json'` | Since "`read`" happens to be a <br/>[*function*](#calling-javascript-functions) (that takes a single <br/>string argument), this has the effect <br/>of loading *all* keys in the JSON file<br/>into [Shared Scope](#shared-scope) as [variables](#def) ! <br/>This *can* be [sometimes handy](karate-core#locator-lookup).
+`* call read ('credentials.json')` | A common mistake. First, there <br/>is no meaning in `call` for JSON. <br/>Second, the space after the "`read`" <br/>makes this equal to the above.
+
 ### Calling Java
 There are examples of calling JVM classes in the section on [Java Interop](#java-interop) and in the [file-upload demo](karate-demo). Also look at the section on [commonly needed utilities](#commonly-needed-utilities) for more ideas.
 
@@ -3210,7 +3471,7 @@ Note that JSON gets auto-converted to `Map` (or `List`) when making the cross-ov
 
 Another example is [`dogs.feature`](karate-demo/src/test/java/demo/dogs/dogs.feature) -  which actually makes JDBC (database) calls, and since the data returned from the Java code is JSON, the last section of the test is able to use [`match`](#match) *very* effectively for data assertions.
 
-A great example of how you can extend Karate, even bypass the HTTP client but still use Karate's test-automation effectively, is this [gRPC](https://grpc.io) example by [@thinkerou](https://github.com/thinkerou): [`karate-grpc`](https://thinkerou.com/karate-grpc/).
+A great example of how you can extend Karate, even bypass the HTTP client but still use Karate's test-automation effectively, is this [gRPC](https://grpc.io) example by [@thinkerou](https://github.com/thinkerou): [`karate-grpc`](https://github.com/thinkerou/karate-grpc). And you can even handle asynchronous flows such as [listening to message-queues](#async).
 
 #### HTTP Basic Authentication Example
 This should make it clear why Karate does not provide 'out of the box' support for any particular HTTP authentication scheme. Things are designed so that you can plug-in what you need, without needing to compile Java code. You get to choose how to manage your environment-specific configuration values such as user-names and passwords.
@@ -3258,7 +3519,18 @@ There are a few situations where this comes in handy:
 
 # do something only if a condition is true
 * eval if (zone == 'zone1') karate.set('temp', 'after')
+```
 
+As a convenience, you can omit the `eval` keyword and so you can shorten the above to:
+
+```cucumber
+* myJavaScriptFunction()
+* if (zone == 'zone1') karate.set('temp', 'after')
+```
+
+This is __very__ convenient especially if you are calling a method on a variable that has been [defined](#def) such as the [`karate`](#the-karate-object) object, and for general-purpose scripting needs such as [UI automation](karate-core). Note how `karate.set()` and `karate.remove()` below are used directly as a script "statement".
+
+```cucumber
 # you can use multiple lines of JavaScript if needed
 * eval
   """
@@ -3275,11 +3547,11 @@ There are a few situations where this comes in handy:
 * def json = { a: 1 }
 * def key = 'b'
 # use dynamic path expressions to mutate json
-* eval json[key] = 2
+* json[key] = 2
 * match json == { a: 1, b: 2 }
-* eval karate.remove('json', '$.' + key)
+* karate.remove('json', '$.' + key)
 * match json == { a: 1 }
-* eval karate.set('json', '$.c[]', { d: 'e' })
+* karate.set('json', '$.c[]', { d: 'e' })
 * match json == { a: 1, c: [{ d: 'e' }] }
 ```
 
@@ -3303,10 +3575,10 @@ And this is another, using [`karate.call()`](#karate-call). Here we want to [`ca
 * def result = responseStatus == 404 ? {} : karate.call('delete-user.feature')
 ```
 
-Or if we don't care about the result, we can use [`eval`](#eval):
+Or if we don't care about the result, we can [`eval`](#eval) an `if` statement:
 
 ```cucumber
-* eval if (responseStatus == 200) karate.call('delete-user.feature')
+* if (responseStatus == 200) karate.call('delete-user.feature')
 ```
 
 And this may give you more ideas. You can always use a [JavaScript function](#javascript-functions) or [call Java](#calling-java) for more complex logic.
@@ -3319,7 +3591,7 @@ And this may give you more ideas. You can always use a [JavaScript function](#ja
 In some rare cases you need to exit a `Scenario` based on some condition. You can use [`karate.abort()`](#karate-abort) like so:
 
 ```cucumber
-* eval if (responseStatus == 404) karate.abort()
+* if (responseStatus == 404) karate.abort()
 ```
 
 Also refer to [polling](#polling) for more ideas.
@@ -3350,7 +3622,7 @@ Here below are a few more common examples:
 
 Utility | Recipe
 ------- | ------                               
-| System Time | `function(){ return java.lang.System.currentTimeMillis() }`
+| System Time (as a string) | `function(){ return java.lang.System.currentTimeMillis() + '' }`
 | UUID  | `function(){ return java.util.UUID.randomUUID() + '' }`
 | Random Number (`0` to `max-1`) | `function(max){ return Math.floor(Math.random() * max) }`
 | Case Insensitive Comparison | `function(a, b){ return a.equalsIgnoreCase(b) }`
@@ -3389,19 +3661,50 @@ Scenario: function re-use, isolated / name-spaced scope
 ```
 
 ## Async
-The JS API has a couple of methods - [`karate.signal(result)`](#karate-signal) and [`karate.listen(timeout)`](#karate-listen) that are useful for involving asynchronous flows into a test. Karate also has built-in support for [websocket](http://www.websocket.org) that is based on this async capability.
-
-This code is able to send as well as receive websocket messages. You can create a websocket instance that can be used to send messages via the [`karate.webSocket()`](#karate-websocket) JS API. Note how you can ignore messages you aren't interested in:
+The JS API has a couple of methods - [`karate.signal(result)`](#karate-signal) and [`karate.listen(timeout)`](#karate-listen) that are useful for involving asynchronous flows into a test. This is best [explained](https://github.com/intuit/karate/tree/master/karate-netty#consumer-provider-example) in this [example](karate-demo/src/test/java/mock/contract/payment-service.feature) that involves listening to an ActiveMQ / JMS queue. Note how [JS functions](#javascript-functions) defined at run-time can be mixed with custom [Java code](#java-interop) to get things done.
 
 ```cucumber
-* def handler = function(msg){ if (msg.startsWith('hello')) karate.signal(msg) }
+Background:
+* def QueueConsumer = Java.type('mock.contract.QueueConsumer')
+* def queue = new QueueConsumer(queueName)
+* def handler = function(msg){ karate.signal(msg) }
+* queue.listen(handler)
+* url paymentServiceUrl + '/payments'
+
+Scenario: create, get, update, list and delete payments
+    Given request { amount: 5.67, description: 'test one' }
+    When method post
+    Then status 200
+    And match response == { id: '#number', amount: 5.67, description: 'test one' }
+    And def id = response.id
+    * json shipment = karate.listen(5000)
+    * print '### received:', shipment
+    * match shipment == { paymentId: '#(id)', status: 'shipped' }
+```
+
+## WebSocket
+Karate also has built-in support for [websocket](http://www.websocket.org) that is based on the [async](#async) capability. The following method signatures are available on the [`karate` JS object](#the-karate-object) to obtain a websocket reference:
+
+* `karate.webSocket(url)`
+* `karate.webSocket(url, handler)`
+* `karate.webSocket(url, handler, options)` - where `options` is an optional JSON (or map-like) object that takes the following optional keys:
+  * `subProtocol` - in case the server expects it
+  * `headers` - another JSON of key-value pairs
+  * `maxPayloadSize` - this defaults to 4194304 (bytes, around 4 MB)
+
+These will init a websocket client for the given `url` and optional `subProtocol`. If a `handler` [function](#javascript-functions) (returning a boolean) is provided - it will be used to complete the "wait" of `socket.listen()` if `true` is returned - where `socket` is the reference to the websocket client returned by `karate.webSocket()`. A handler function is needed only if you have to ignore other incoming traffic. If you need custom headers for the websocket handshake, use JSON as the last argument.
+
+Here is an example, where the same websocket connection is used to send as well as receive a message.
+
+```cucumber
+* def handler = function(msg){ return msg.startsWith('hello') }
 * def socket = karate.webSocket(demoBaseUrl + '/websocket', handler)
-* eval socket.send('Billie')
-* def result = karate.listen(5000)
+* socket.send('Billie')
+* def result = socket.listen(5000)
 * match result == 'hello Billie !'
 ```
 
-For more details, please refer to [this discussion](https://github.com/intuit/karate/issues/395#issuecomment-434745214) which has links to the message-queue listener example as well.
+For handling binary messages, the same `karate.webSocket()` method signatures exist for `karate.webSocketBinary()`. Refer to these examples for more: [`echo.feature`](karate-demo/src/test/java/demo/websocket/echo.feature) | [`websocket.feature`](karate-demo/src/test/java/demo/websocket/websocket.feature). Note that any websocket instances created will be auto-closed at the end of the `Scenario`.
 
 ## Tags
 Gherkin has a great way to sprinkle meta-data into test-scripts - which gives you some interesting options when running tests in bulk.  The most common use-case would be to partition your tests into 'smoke', 'regression' and the like - which enables being able to selectively execute a sub-set of tests.
@@ -3450,7 +3753,7 @@ Instead, Karate gives you all you need as part of the syntax. Here is a summary:
 
 To Run Some Code | How
 ---------------- | ---
-Before *everything* (or 'globally' once) | Use [`karate.callSingle()`](#karate-callsingle) in [`karate-config.js`](#karate-configjs). Only recommended for advanced users, but this guarantees a routine is run only once, *even* when [running tests in parallel](#parallel-execution).
+Before *everything* (or 'globally' once) | Use [`karate.callSingle()`](#karate-callsingle) in [`karate-config.js`](#karate-configjs). Only recommended for advanced users, but this guarantees a routine is run only once, *even* when [running tests in parallel](#parallel-execution). You *can* use this directly in a `*.feature` file, but it logically fits better in the global "bootstrap".
 Before every `Scenario` | Use the [`Background`](#script-structure). Note that [`karate-config.js`](#karate-configjs) is processed before *every* `Scenario` - so you can choose to put "global" config here, for example using [`karate.configure()`](#karate-configure).
 Once (or at the start of) every `Feature` | Use a [`callonce`](#callonce) in the [`Background`](#script-structure). The advantage is that you can set up variables (using [`def`](#def) if needed) which can be used in all `Scenario`-s within that `Feature`.
 After every `Scenario` | [`configure afterScenario`](#configure) (see [example](karate-demo/src/test/java/demo/hooks/hooks.feature))
@@ -3459,7 +3762,7 @@ At the end of the `Feature` | [`configure afterFeature`](#configure) (see [examp
 
 ## Data Driven Tests
 ### The Cucumber Way
-Cucumber has a concept of [Scenario Outlines](https://github.com/cucumber/cucumber/wiki/Scenario-Outlines) where you can re-use a set of data-driven steps and assertions, and the data can be declared in a very user-friendly fashion. Observe the usage of `Scenario Outline:` instead of `Scenario:`, and the new `Examples:` section.
+Cucumber has a concept of [Scenario Outlines](https://docs.cucumber.io/gherkin/reference/#scenario-outline) where you can re-use a set of data-driven steps and assertions, and the data can be declared in a very user-friendly fashion. Observe the usage of `Scenario Outline:` instead of `Scenario:`, and the new `Examples:` section.
 
 You should take a minute to compare this with the [exact same example implemented in REST-assured and TestNG](https://github.com/basdijkstra/rest-assured-workshop/blob/d9734da98bfcd8087055bdcd78545581dd23cb77/src/test/java/answers/RestAssuredAnswers2Test.java). Note that this example only does a "string equals" check on *parts* of the JSON, but with Karate you are always encouraged to match the *entire* payload in one step.
 
@@ -3494,15 +3797,67 @@ Scenario Outline: given race number, validate number of pitstops for Max Verstap
 ```
 This is great for testing boundary conditions against a single end-point, with the added bonus that your test becomes even more readable. This approach can certainly enable product-owners or domain-experts who are not programmer-folk, to review, and even collaborate on test-scenarios and scripts.
 
-For an advanced example, see: [`examples.feature`](karate-demo/src/test/java/demo/outline/examples.feature).
+### Scenario Outline Enhancements
+Karate has enhanced the Cucumber `Scenario Outline` as follows:
+* __Type Hints__: if the `Examples` column header has a `!` appended, each value will be evaluated as a JavaScript data-type (number, boolean, or *even* in-line JSON) - else it defaults to string.
+* __Magic Variables__: `__row` gives you the entire row as a JSON object, and `__num` gives you the row index (the first row is `0`).
+* __Auto Variables__: in addition to `__row`, each column key-value will be available as a separate [variable](#def), which greatly simplifies JSON manipulation - especially when you want to re-use JSON [files](#reading-files) containing [embedded expressions](#embedded-expressions).
+  * You can disable the "auto variables" behavior by setting the `outlineVariablesAuto` [`configure` setting](#configure) to `false`.
+* Any empty cells will result in a `null` value for that column-key
+
+These are best explained with [examples](karate-junit4/src/test/java/com/intuit/karate/junit4/demos/outline.feature). You can choose between the string-placeholder style `<foo>` or *directly* refer to the [variable](#def) `foo` (or even the *whole row* JSON as `__row`) in JSON-friendly [expressions](#karate-expressions).
+
+Note that even the scenario name can accept placeholders - which is very useful in reports. 
+
+```cucumber
+Scenario Outline: name is <name> and age is <age>
+  * def temp = '<name>'
+  * match temp == name
+  * match temp == __row.name
+  * def expected = __num == 0 ? 'name is Bob and age is 5' : 'name is Nyan and age is 6'
+  * match expected == karate.info.scenarioName
+
+  Examples:
+    | name | age |
+    | Bob  | 5   |
+    | Nyan | 6   |
+
+Scenario Outline: magic variables with type hints
+  * def expected = [{ name: 'Bob', age: 5 }, { name: 'Nyan', age: 6 }]
+  * match __row == expected[__num]
+
+  Examples:
+    | name | age! |
+    | Bob  | 5    |
+    | Nyan | 6    |
+
+Scenario Outline: embedded expressions and type hints
+  * match __row == { name: '#(name)', alive: '#boolean' }
+
+  Examples:
+    | name | alive! |
+    | Bob  | false  |
+    | Nyan | true   |
+
+Scenario Outline: inline json
+  * match __row == { first: 'hello', second: { a: 1 } }
+  * match first == 'hello'
+  * match second == { a: 1 }
+
+  Examples:
+    | first  | second!  |
+    | hello  | { a: 1 } |
+```
+
+For another example, see: [`examples.feature`](karate-demo/src/test/java/demo/outline/examples.feature).
 
 ### The Karate Way
-The limitation of the Cucumber `Scenario Outline:` seen above is that the number of rows in the `Examples:` is fixed. But take a look at how Karate can [loop over a `*.feature` file](#data-driven-features) for each object in a JSON array - which gives you dynamic data-driven testing, if you need it. For advanced examples, refer to some of the scenarios within this [demo](karate-demo): [`dynamic-params.feature`](karate-demo/src/test/java/demo/search/dynamic-params.feature#L70).
+The limitation of the Cucumber `Scenario Outline:` (seen above) is that the number of rows in the `Examples:` is fixed. But take a look at how Karate can [loop over a `*.feature` file](#data-driven-features) for each object in a JSON array - which gives you dynamic data-driven testing, if you need it. For advanced examples, refer to some of the scenarios within this [demo](karate-demo): [`dynamic-params.feature`](karate-demo/src/test/java/demo/search/dynamic-params.feature#L70).
 
 Also see the option below, where you can data-drive an `Examples:` table using JSON.
 
 ### Dynamic Scenario Outline
-You can feed an `Examples` table from a JSON array, which is great for those situations where the table-content is dynamically resolved at run-time. This capability is triggered when the table consists of a single "cell", i.e. there is exactly one row and one column in the table.  Here is an example:
+You can feed an `Examples` table from a JSON array, which is great for those situations where the table-content is dynamically resolved at run-time. This capability is triggered when the table consists of a single "cell", i.e. there is exactly one row and one column in the table.  Here is an example (also see [this video](https://twitter.com/KarateDSL/status/1051433711814627329)):
 
 ```cucumber
 Feature: scenario outline using a dynamic table

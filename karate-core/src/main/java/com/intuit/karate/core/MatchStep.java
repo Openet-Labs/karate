@@ -57,7 +57,11 @@ public class MatchStep {
             lhsEndPos = raw.indexOf(" !contains");
         }
         int searchPos = 0;
-        if (lhsEndPos != -1) {
+        int eqPos = raw.indexOf(" == ");
+        if (eqPos == -1) {
+            eqPos = raw.indexOf(" != ");
+        }
+        if (lhsEndPos != -1 && (eqPos == -1 || eqPos > lhsEndPos)) {
             contains = true;
             not = raw.charAt(lhsEndPos + 1) == '!';
             searchPos = lhsEndPos + (not ? 10 : 9);
@@ -78,7 +82,8 @@ public class MatchStep {
                 throw new RuntimeException("syntax error, expected '==' for match");
             }
             lhsEndPos = min(equalPos, notEqualPos);
-            if (lhsEndPos > spacePos && rightParenPos != -1 && rightParenPos > lhsEndPos) {
+            if (lhsEndPos > spacePos && rightParenPos != -1 
+                    && rightParenPos > lhsEndPos && rightParenPos < leftParenPos) {
                 equalPos = raw.indexOf(" ==", rightParenPos);
                 notEqualPos = raw.indexOf(" !=", rightParenPos);
                 if (equalPos == -1 && notEqualPos == -1) {

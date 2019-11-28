@@ -33,7 +33,7 @@ Scenario: test removing and adding elements / attributes
 
 Scenario: test removing elements from xml from js
     * def base = <query><name>foo</name></query>
-    * eval karate.remove('base', '/query/name')
+    * karate.remove('base', '/query/name')
     * match base == <query/>
 
 Scenario: dynamic xpath that uses variables
@@ -43,6 +43,9 @@ Scenario: dynamic xpath that uses variables
     * match name == 'bar'
     * def queryName = karate.xmlPath(xml, '/query/' + elementName)
     * match queryName == <name><foo>bar</foo></name>
+    * def foo = <root><a>1</a><a>2</a></root>
+    * def tmp = karate.xmlPath(foo, 'count(/root/a)')
+    * match tmp == 2
 
 Scenario: placeholders using xml embedded expressions
     * def phoneNumber = '123456'
@@ -267,7 +270,7 @@ Scenario: creating xml with repeating elements in a loop
       karate.set('xml', base + 'type', u.subsType);
     }
     """
-    * eval karate.forEach(users, fun)
+    * karate.forEach(users, fun)
     * match xml ==
     """
     <users>

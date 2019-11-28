@@ -11,9 +11,14 @@ Scenario:
     * def b = 3
     * match c == {}
     * set c.foo = 'bar'
+    # the callonce in the background is a snapshot at THAT point in time
+    # so the next scenario should "rewind" to that state
 
 Scenario:
     * assert a == 1
     * assert typeof b == 'undefined'
-    * match c == { foo: 'bar' }
+    # get else default value
+    * def b = karate.get('b', 42)
+    * match b == 42
+    * match c == {}
     

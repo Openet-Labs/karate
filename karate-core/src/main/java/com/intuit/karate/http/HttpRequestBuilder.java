@@ -30,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  *
@@ -48,7 +47,6 @@ public class HttpRequestBuilder {
     private ScriptValue body;
     private String method;
     private String soapAction;
-    private boolean retry;
     private String retryUntil;
 
     public HttpRequestBuilder copy() {
@@ -73,10 +71,11 @@ public class HttpRequestBuilder {
             out.multiPartItems = new ArrayList(multiPartItems);
         }
         if (body != null) {
-            out.body = body.copy();
+            out.body = body.copy(true);
         }
         out.method = method;
         out.soapAction = soapAction;
+        out.retryUntil = retryUntil;
         return out;
     }
 
@@ -106,15 +105,18 @@ public class HttpRequestBuilder {
 
     public String getUrlAndPath() {
         String temp = url;
-        if (!temp.endsWith("/")) {
-            temp = temp + "/";
-        }
         if (paths == null) {
+            if (!temp.endsWith("/")) {
+                temp = temp + "/";
+            }
             return temp;
         }
         for (String path : paths) {
             if (path.startsWith("/")) {
                 path = path.substring(1);
+            }
+            if (!temp.endsWith("/")) {
+                temp = temp + "/";
             }
             temp = temp + path;
         }
@@ -141,7 +143,7 @@ public class HttpRequestBuilder {
         }
         headers.remove(name);
     }
-    
+
     public void removeHeaderIgnoreCase(String name) {
         if (headers == null || name == null) {
             return;
@@ -151,7 +153,7 @@ public class HttpRequestBuilder {
                 .collect(Collectors.toList());
         // has to be separate step else concurrent modification exception
         list.forEach(k -> headers.remove(k));
-    }    
+    }
 
     public void setHeaders(MultiValuedMap headers) {
         this.headers = headers;

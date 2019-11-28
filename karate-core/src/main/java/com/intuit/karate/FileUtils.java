@@ -1,9 +1,33 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2017 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package com.intuit.karate;
 
 import com.intuit.karate.core.ScenarioContext;
 import com.intuit.karate.core.Feature;
 import com.intuit.karate.core.FeatureParser;
 import com.intuit.karate.exception.KarateFileNotFoundException;
+import com.intuit.karate.shell.StopListenerThread;
 import com.jayway.jsonpath.DocumentContext;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,13 +64,14 @@ import org.slf4j.LoggerFactory;
  */
 public class FileUtils {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(FileUtils.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(FileUtils.class);
 
     public static final Charset UTF8 = StandardCharsets.UTF_8;
 
     private static final String CLASSPATH = "classpath";
 
     public static final String CLASSPATH_COLON = CLASSPATH + ":";
+    private static final String DOT_FEATURE = ".feature";
     public static final String THIS_COLON = "this:";
     public static final String FILE_COLON = "file:";
     public static final String SRC_TEST_JAVA = "src/test/java";
@@ -105,6 +130,7 @@ public class FileUtils {
         text = pair.left;
         if (isJsonFile(text) || isXmlFile(text) || isJavaScriptFile(text)) {
             String contents = readFileAsString(text, context);
+            contents = StringUtils.fixJavaScriptFunction(contents);
             ScriptValue temp = Script.evalKarateExpression(contents, context);
             return new ScriptValue(temp.getValue(), text);
         } else if (isTextFile(text) || isGraphQlFile(text)) {
@@ -124,7 +150,7 @@ public class FileUtils {
             DocumentContext doc = JsonUtils.fromYaml(contents);
             return new ScriptValue(doc, text);
         } else {
-            InputStream is = getFileStream(text, context);
+            InputStream is = readFileAsStream(text, context);
             return new ScriptValue(is, text);
         }
     }
@@ -158,8 +184,7 @@ public class FileUtils {
 
     private static Resource toResource(String path, ScenarioContext context) {
         if (isClassPath(path)) {
-            ClassLoader cl = context.getClass().getClassLoader();
-            return new Resource(fromRelativeClassPath(path, cl), path);
+            return new Resource(context, path);
         } else if (isFilePath(path)) {
             String temp = removePrefix(path);
             return new Resource(new File(temp), path);
@@ -167,39 +192,51 @@ public class FileUtils {
             String temp = removePrefix(path);
             Path parentPath = context.featureContext.parentPath;
             Path childPath = parentPath.resolve(temp);
-            return new Resource(childPath, path);
+            return new Resource(childPath);
         } else {
             try {
                 Path parentPath = context.rootFeatureContext.parentPath;
                 Path childPath = parentPath.resolve(path);
-                return new Resource(childPath, path);
+                return new Resource(childPath);
             } catch (Exception e) {
-                logger.error("feature relative path resolution failed: {}", e.getMessage());
+                LOGGER.error("feature relative path resolution failed: {}", e.getMessage());
                 throw e;
             }
         }
     }
 
     public static String readFileAsString(String path, ScenarioContext context) {
-        try {
-            InputStream is = getFileStream(path, context);
-            return toString(is);
-        } catch (Exception e) {
-            String message = String.format("could not find or read file: %s", path);
-            context.logger.trace("{}", message);
-            throw new KarateFileNotFoundException(message);
-        }
+        return toString(readFileAsStream(path, context));
     }
 
-    public static InputStream getFileStream(String path, ScenarioContext context) {
-        Resource fr = toResource(path, context);
-        return fr.getStream();
+    public static InputStream readFileAsStream(String path, ScenarioContext context) {
+        try {
+            return toResource(path, context).getStream();
+        } catch (Exception e) {
+            InputStream inputStream = context.getResourceAsStream(removePrefix(path));
+            if (inputStream == null) {
+                String message = String.format("could not find or read file: %s", path);
+                context.logger.trace("{}", message);
+                throw new KarateFileNotFoundException(message);
+            }
+            return inputStream;
+        }
     }
 
     public static String toPackageQualifiedName(String path) {
         path = removePrefix(path);
-        String packagePath = path.replace("/", "."); // assumed to be already in non-windows form
-        if (packagePath.endsWith(".feature")) {
+        path = path.replace('/', '.');
+        if (path.contains(":\\")) { // to remove windows drive letter and colon
+            path = removePrefix(path);
+        }
+        if (path.indexOf('\\') != -1) { // for windows paths
+            path = path.replace('\\', '.');
+        }
+        String packagePath = path.replace("..", "");
+        if (packagePath.startsWith(".")) {
+            packagePath = packagePath.substring(1);
+        }
+        if (packagePath.endsWith(DOT_FEATURE)) {
             packagePath = packagePath.substring(0, packagePath.length() - 8);
         }
         return packagePath;
@@ -230,7 +267,7 @@ public class FileUtils {
                 return XmlUtils.toString(XmlUtils.toXmlDoc(raw), true);
             }
         } catch (Exception e) {
-            logger.warn("parsing failed: {}", e.getMessage());
+            LOGGER.warn("parsing failed: {}", e.getMessage());
         }
         return raw;
     }
@@ -269,7 +306,7 @@ public class FileUtils {
 
     public static void copy(File src, File dest) {
         try {
-            writeToFile(dest, toString(new FileInputStream(src)));
+            writeToFile(dest, toBytes(new FileInputStream(src)));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -334,15 +371,15 @@ public class FileUtils {
     public static void renameFileIfZeroBytes(String fileName) {
         File file = new File(fileName);
         if (!file.exists()) {
-            logger.warn("file not found, previous write operation may have failed: {}", fileName);
+            LOGGER.warn("file not found, previous write operation may have failed: {}", fileName);
         } else if (file.length() == 0) {
-            logger.warn("file size is zero bytes, previous write operation may have failed: {}", fileName);
+            LOGGER.warn("file size is zero bytes, previous write operation may have failed: {}", fileName);
             try {
                 File dest = new File(fileName + ".fail");
                 file.renameTo(dest);
-                logger.warn("renamed zero length file to: {}", dest.getName());
+                LOGGER.warn("renamed zero length file to: {}", dest.getName());
             } catch (Exception e) {
-                logger.warn("failed to rename zero length file: {}", e.getMessage());
+                LOGGER.warn("failed to rename zero length file: {}", e.getMessage());
             }
         }
     }
@@ -360,13 +397,14 @@ public class FileUtils {
             return CLASSPATH_COLON + toStandardPath(path.toString());
         }
         for (URL url : getAllClassPathUrls(cl)) {
-            Path rootPath = getPathFor(url, null);
-            if (path.startsWith(rootPath)) {
+            Path rootPath = urlToPath(url, null);
+            if (rootPath != null && path.startsWith(rootPath)) {
                 Path relativePath = rootPath.relativize(path);
                 return CLASSPATH_COLON + toStandardPath(relativePath.toString());
             }
         }
-        return null;
+        // we didn't find this on the classpath, fall back to absolute
+        return path.toString().replace('\\', '/');
     }
 
     public static File getDirContaining(Class clazz) {
@@ -375,18 +413,32 @@ public class FileUtils {
     }
 
     public static Path getPathContaining(Class clazz) {
+        String relative = packageAsPath(clazz);
+        URL url = clazz.getClassLoader().getResource(relative);
+        return urlToPath(url, null);
+    }
+
+    private static String packageAsPath(Class clazz) {
         Package p = clazz.getPackage();
         String relative = "";
         if (p != null) {
             relative = p.getName().replace('.', '/');
         }
-        URL url = clazz.getClassLoader().getResource(relative);
-        return getPathFor(url, null);
+        return relative;
     }
 
     public static File getFileRelativeTo(Class clazz, String path) {
         Path dirPath = getPathContaining(clazz);
-        return new File(dirPath + File.separator + path);
+        File file = new File(dirPath + File.separator + path);
+        if (file.exists()) {
+            return file;
+        }
+        try {
+            URL relativePath = clazz.getClassLoader().getResource(packageAsPath(clazz) + File.separator + path);
+            return Paths.get(relativePath.toURI()).toFile();
+        } catch (Exception e) {
+            throw new IllegalArgumentException(String.format("Cannot resolve path '%s' relative to class '%s' ", path, clazz.getName()), e);
+        }
     }
 
     public static String toRelativeClassPath(Class clazz) {
@@ -397,7 +449,10 @@ public class FileUtils {
     public static Path fromRelativeClassPath(String relativePath, ClassLoader cl) {
         relativePath = removePrefix(relativePath);
         URL url = cl.getResource(relativePath);
-        return getPathFor(url, relativePath);
+        if (url == null) {
+            throw new RuntimeException("file does not exist: " + relativePath);
+        }
+        return urlToPath(url, relativePath);
     }
 
     public static Path fromRelativeClassPath(String relativePath, Path parentPath) {
@@ -415,6 +470,9 @@ public class FileUtils {
     }
 
     public static List<Resource> scanForFeatureFiles(List<String> paths, ClassLoader cl) {
+        if (paths == null) {
+            return Collections.EMPTY_LIST;
+        }
         List<Resource> list = new ArrayList();
         for (String path : paths) {
             boolean classpath = isClassPath(path);
@@ -446,7 +504,7 @@ public class FileUtils {
         return uri.toString().contains("!/");
     }
 
-    private static Path getPathFor(URL url, String relativePath) {
+    public static Path urlToPath(URL url, String relativePath) {
         try {
             URI uri = url.toURI();
             if (isJarPath(uri)) {
@@ -461,7 +519,7 @@ public class FileUtils {
                 return Paths.get(uri);
             }
         } catch (Exception e) {
-            logger.trace("invalid path: {}", e.getMessage());
+            LOGGER.trace("invalid path: {}", e.getMessage());
             return null;
         }
     }
@@ -516,10 +574,10 @@ public class FileUtils {
                 fs = FileSystems.getFileSystem(uri);
             } catch (Exception e) {
                 try {
-                    logger.trace("creating file system for URI: {} - {}", uri, e.getMessage());
+                    LOGGER.trace("creating file system for URI: {} - {}", uri, e.getMessage());
                     fs = FileSystems.newFileSystem(uri, Collections.emptyMap());
                 } catch (IOException ioe) {
-                    logger.error("file system creation failed for URI: {} - {}", uri, ioe.getMessage());
+                    LOGGER.error("file system creation failed for URI: {} - {}", uri, ioe.getMessage());
                     throw new RuntimeException(ioe);
                 }
             }
@@ -544,10 +602,27 @@ public class FileUtils {
 
     private static void collectFeatureFiles(URL url, String searchPath, List<Resource> files) {
         boolean classpath = url != null;
+        int colonPos = searchPath.lastIndexOf(':');
+        int line = -1;
+        if (colonPos > 1) { // line number has been appended, and not windows "C:\foo" kind of path
+            try {
+                line = Integer.valueOf(searchPath.substring(colonPos + 1));
+                searchPath = searchPath.substring(0, colonPos);
+            } catch (Exception e) {
+                // defensive coding, abort attempting to parse line number
+            }
+        }
         Path rootPath;
         Path search;
         if (classpath) {
-            rootPath = getPathFor(url, null);
+            File test = new File(searchPath);
+            if (test.exists() && test.isAbsolute()) {
+                // although the classpath: prefix was used this is an absolute path ! fix
+                classpath = false;
+            }
+        }
+        if (classpath) {
+            rootPath = urlToPath(url, null);
             if (rootPath == null) { // windows edge case
                 return;
             }
@@ -566,14 +641,23 @@ public class FileUtils {
             Path path = paths.next();
             Path fileName = path.getFileName();
             if (fileName != null && fileName.toString().endsWith(".feature")) {
+                if (!files.isEmpty()) {
+                    // since the classpath search paths are in pairs or groups
+                    // skip if we found this already
+                    // else duplication happens if we use absolute paths as search paths
+                    Path prev = files.get(files.size() - 1).getPath();
+                    if (path.equals(prev)) {
+                        continue;
+                    }
+                }
                 String relativePath = rootPath.relativize(path.toAbsolutePath()).toString();
-                relativePath = relativePath.replaceAll("[.]{2,}", "");
+                relativePath = toStandardPath(relativePath).replaceAll("[.]+/", "");
                 String prefix = classpath ? CLASSPATH_COLON : "";
-                files.add(new Resource(path, prefix + toStandardPath(relativePath)));
+                files.add(new Resource(path, prefix + relativePath, line));
             }
         }
     }
-    
+
     public static String getBuildDir() {
         String temp = System.getProperty("karate.output.dir");
         if (temp != null) {
@@ -581,33 +665,62 @@ public class FileUtils {
         }
         String command = System.getProperty("sun.java.command", "");
         return command.contains("org.gradle.") ? "build" : "target";
-    }    
+    }
 
-    public static enum Platform {
+    public static boolean waitForSocket(int port) {
+        StopListenerThread waiter = new StopListenerThread(port, () -> {
+            LOGGER.info("*** exited socket wait succesfully");
+        });
+        waiter.start();
+        port = waiter.getPort();
+        System.out.println("*** waiting for socket, type the command below:\ncurl http://localhost:"
+                + port + "\nin a new terminal (or open the URL in a web-browser) to proceed ...");
+        try {
+            waiter.join();
+            return true;
+        } catch (Exception e) {
+            LOGGER.warn("*** wait thread failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public static enum OsType {
         WINDOWS,
-        MAC,
-        UNIX,
+        MACOSX,
+        LINUX,
         UNKNOWN
     }
 
-    public static boolean isWindows() {
-        return getPlatform() == Platform.WINDOWS;
+    public static boolean isOsWindows() {
+        return getOsType() == OsType.WINDOWS;
     }
 
-    public static boolean isMac() {
-        return getPlatform() == Platform.MAC;
+    public static boolean isOsMacOsX() {
+        return getOsType() == OsType.MACOSX;
     }
 
-    public static Platform getPlatform() {
-        String os = System.getProperty("os.name", "").toLowerCase();
-        if (os.contains("win")) {
-            return Platform.WINDOWS;
-        } else if (os.contains("mac")) {
-            return Platform.MAC;
-        } else if (os.contains("nix") || os.contains("nux")) {
-            return Platform.UNIX;
+    public static String getOsName() {
+        return System.getProperty("os.name");
+    }
+
+    public static OsType getOsType() {
+        return getOsType(getOsName());
+    }
+
+    public static OsType getOsType(String name) {
+        if (name == null) {
+            name = "unknown";
         } else {
-            return Platform.UNKNOWN;
+            name = name.toLowerCase();
+        }
+        if (name.contains("win")) {
+            return OsType.WINDOWS;
+        } else if (name.contains("mac")) {
+            return OsType.MACOSX;
+        } else if (name.contains("nix") || name.contains("nux")) {
+            return OsType.LINUX;
+        } else {
+            return OsType.UNKNOWN;
         }
     }
 

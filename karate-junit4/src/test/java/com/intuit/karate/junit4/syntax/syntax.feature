@@ -150,8 +150,8 @@ Then match cat / == <cat><name>Jean</name></cat>
 * def adder = function(a, b) { return a + b }
 * assert adder(1, 2) == 3
 
-* def greeter = function(name) { return 'hello ' + name }
-* assert greeter('Bob') == 'hello Bob'
+* def greeter = function(title, name) { return 'hello ' + title + ' ' + name }
+* assert greeter('Mr.', 'Bob') == 'hello Mr. Bob'
 
 # functions can use path notation
 * def ticket = { userId: '123456' }  
@@ -236,7 +236,7 @@ function(args) {
 * assert query == 'query q { company { taxAgencies(first: 5) { } } }'
 
 # called function scripts can read from the file system
-* def reader = function() { return karate.read('demo-json.json') }
+* def reader = function() { return read('demo-json.json') }
 * def fromFile = call reader
 * match fromFile == { from: 'file' }
 
@@ -487,7 +487,7 @@ Then match pdf == read('test.pdf')
 """
 
 # inline yaml
-* yaml bar =
+* text bar =
 """
 name: John
 input:
@@ -505,6 +505,7 @@ output:
       - notes
       - deleted
 """
+* yaml bar = bar
 * match bar ==
 """
 {

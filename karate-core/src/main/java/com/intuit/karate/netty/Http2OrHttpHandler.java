@@ -16,6 +16,8 @@
 
 package com.intuit.karate.netty;
 
+import java.util.function.Supplier;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +28,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * Used during protocol negotiation, the main function of this handler is to
@@ -36,12 +39,14 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     private static final Logger logger = LoggerFactory.getLogger(Http2OrHttpHandler.class);
     private final FeatureBackend backend;
     private final Runnable stopFunction;
+	private final Supplier<SslContext> contextSupplier;
 
     public static final int MAX_CONTENT_LENGTH = 1024 * 1024;
     
-    protected Http2OrHttpHandler(FeatureBackend backend, String fallbackHttpVersion, Runnable stopFunction) {
+    protected Http2OrHttpHandler(FeatureBackend backend, String fallbackHttpVersion, Supplier<SslContext> contextSupplier, Runnable stopFunction) {
         super(fallbackHttpVersion);
         this.backend = backend;
+        this.contextSupplier = contextSupplier;
         this.stopFunction = stopFunction;
         logger.info("ALPN Handler setup with fallback to: " + fallbackHttpVersion);
     }
@@ -66,13 +71,13 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
         logger.info("configureHttp2");
         
         ctx.pipeline().addLast(new Http2ConnectionHandlerBuilder().build());
-        ctx.pipeline().addLast(new FeatureServerRequestHandler(backend, true, stopFunction));
+        ctx.pipeline().addLast(new FeatureServerRequestHandler(backend, true, contextSupplier, stopFunction));
     }
 
     private void configureHttp1(ChannelHandlerContext ctx) throws Exception {
         logger.info("configureHttp1");
         ctx.pipeline().addLast(new HttpServerCodec(),
                                new HttpObjectAggregator(MAX_CONTENT_LENGTH),
-                               new FeatureServerRequestHandler(backend, true, stopFunction));
+                               new FeatureServerRequestHandler(backend, true, contextSupplier, stopFunction));
     }
 }

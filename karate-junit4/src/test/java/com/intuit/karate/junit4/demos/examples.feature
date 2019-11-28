@@ -16,6 +16,7 @@ Given def cat =
 Then match cat.kittens[*].id == [23, 42]
 Then match cat.kittens[*].id contains 23
 Then match cat.kittens[*].id contains [42, 23]
+Then match cat..name == ['Billie', 'Bob', 'Wild']
 Then match each cat.kittens contains { id: '#number' }
 Then match each cat.kittens == { id: '#notnull', name: '#regex [A-Z][a-z]+' }
 
@@ -137,7 +138,7 @@ Then match session == <session><locale>en</locale><sessionUser><user><name>john<
 * match response == expected
 
 * def temp = 'before'
-* eval if (zone == 'zone1') karate.set('temp', 'after')
+* if (zone == 'zone1') karate.set('temp', 'after')
 * match temp == 'after'
 
 * eval
@@ -155,11 +156,11 @@ karate.set('temp', squares);
 * def json = { a: 1 }
 * def key = 'b'
 # use dynamic path expressions to mutate json
-* eval json[key] = 2
+* json[key] = 2
 * match json == { a: 1, b: 2 }
-* eval karate.remove('json', '$.' + key)
+* karate.remove('json', '$.' + key)
 * match json == { a: 1 }
-* eval karate.set('json', '$.c[]', { d: 'e' })
+* karate.set('json', '$.c[]', { d: 'e' })
 * match json == { a: 1, c: [{ d: 'e' }] }
 
 # #null and #notpresent
@@ -196,3 +197,13 @@ karate.set('temp', squares);
 * assert equalsIgnoreCase('hello', 'HELLO')
 * def foo = { message: 'HELLO' }
 * match foo == { message: '#? equalsIgnoreCase(_, "hello")' }
+
+# csv conversion
+* text foo =
+    """
+    name,type
+    Billie,LOL
+    Bob,Wild
+    """
+* csv bar = foo
+* match bar == [{ name: 'Billie', type: 'LOL' }, { name: 'Bob', type: 'Wild' }]

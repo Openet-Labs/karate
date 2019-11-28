@@ -35,19 +35,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <maven.compiler.version>3.6.0</maven.compiler.version>
-        <maven.surefire.version>2.22.1</maven.surefire.version>
-        <maven.shade.version>3.1.1</maven.shade.version>
+        <maven.surefire.version>2.22.2</maven.surefire.version>
+        <maven.shade.version>3.2.1</maven.shade.version>
         <junit.version>4.12</junit.version>
+        <javafx.controls.version>13-ea+12</javafx.controls.version>
         <nexus.staging.plugin.version>1.6.7</nexus.staging.plugin.version>
         <spring.version>4.3.8.RELEASE</spring.version>
         <spring.boot.version>1.5.16.RELEASE</spring.boot.version>
         <jacoco.plugin.version>0.7.9</jacoco.plugin.version>        
         <cucumber.reporting.version>3.8.0</cucumber.reporting.version>
         <apache.commons.io.version>2.5</apache.commons.io.version>
-        <netty.boringssl.version>2.0.20.Final</netty.boringssl.version>
+        <netty.boringssl.version>2.0.27.Final</netty.boringssl.version>
         <conscrypt.openjdk.uber.version>1.4.1</conscrypt.openjdk.uber.version>
         <conscrypt.client.version>9.4.14.v20181114</conscrypt.client.version>
-        <netty.version>4.1.18.Final</netty.version>
+        <netty.version>4.1.37.Final</netty.version>
     </properties>
 
     <modules>
@@ -55,7 +56,7 @@
         <module>karate-apache</module>
         <module>karate-apache-async</module>          
         <module>karate-junit4</module>
-        <module>karate-junit5</module>
+        <module>karate-junit5</module>        
         <module>karate-netty</module>
         <module>karate-gatling</module>             
         <module>karate-demo</module>
@@ -70,12 +71,7 @@
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>12-ea+9</version>
-        </dependency>          		
+        </dependency>         		
     </dependencies>
 
     <build>       

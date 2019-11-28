@@ -25,14 +25,18 @@ package com.intuit.karate.core;
 
 import com.intuit.karate.Logger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author pthomas3
  */
 public class FeatureExecutionUnit implements Runnable {
+
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(FeatureExecutionUnit.class);
 
     public final ExecutionContext exec;
     private final boolean parallelScenarios;
@@ -51,8 +55,25 @@ public class FeatureExecutionUnit implements Runnable {
         return units;
     }
 
-    public void init(Logger logger) { // logger applies only if called from ui
-        units = exec.featureContext.feature.getScenarioExecutionUnits(exec, logger);
+    public void init() {
+        if (exec.callContext.executionHooks != null) {
+            for (ExecutionHook hook : exec.callContext.executionHooks) {
+                boolean hookResult;
+                Feature feature = exec.featureContext.feature;
+                try {
+                    hookResult = hook.beforeFeature(feature, exec);
+                } catch (Exception e) {
+                    LOGGER.warn("execution hook beforeFeature failed, will skip: {} - {}", feature.getRelativePath(), e.getMessage());
+                    hookResult = false;
+                }
+                if (hookResult == false) {
+                    units = Collections.EMPTY_LIST;
+                }
+            }
+        }
+        if (units == null) { // no hook failed
+            units = exec.featureContext.feature.getScenarioExecutionUnits(exec);
+        }
         int count = units.size();
         results = new ArrayList(count);
         latch = new CountDownLatch(count);
@@ -67,19 +88,19 @@ public class FeatureExecutionUnit implements Runnable {
     @Override
     public void run() {
         if (units == null) {
-            init(null);
+            init();
         }
         for (ScenarioExecutionUnit unit : units) {
-            if (isSelected(unit)) {
-                run(unit);
+            if (isSelected(unit) && run(unit)) {
+                // unit.next should count down latch when done
+            } else { // un-selected / failed scenario
+                latch.countDown();
             }
         }
-        if (parallelScenarios) { // else gatling hangs
-            try {
-                latch.await();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            latch.await();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         stop();
         if (next != null) {
@@ -98,46 +119,69 @@ public class FeatureExecutionUnit implements Runnable {
             exec.result.setResultVars(lastContextExecuted.vars);
             lastContextExecuted.invokeAfterHookIfConfigured(true);
         }
+        if (exec.callContext.executionHooks != null) {
+            for (ExecutionHook hook : exec.callContext.executionHooks) {
+                try {
+                    hook.afterFeature(exec.result, exec);
+                } catch (Exception e) {
+                    LOGGER.warn("execution hook afterFeature failed: {} - {}",
+                            exec.featureContext.feature.getRelativePath(), e.getMessage());
+                }
+            }
+        }
     }
 
     public boolean isSelected(ScenarioExecutionUnit unit) {
-        FeatureContext featureContext = exec.featureContext;
-        String callName = featureContext.feature.getCallName();
-        Scenario scenario = unit.scenario;
-        if (callName != null) {
-            if (!scenario.getName().matches(callName)) {
-                unit.logger.info("skipping scenario at line: {} - {}, needed: {}", scenario.getLine(), scenario.getName(), callName);
-                latch.countDown();
-                return false;
-            }
-            unit.logger.info("found scenario at line: {} - {}", scenario.getLine(), callName);
-        }
-        Tags tags = scenario.getTagsEffective();
-        if (!tags.evaluate(featureContext.tagSelector)) {
-            unit.logger.trace("skipping scenario at line: {} with tags effective: {}", scenario.getLine(), tags.getTags());
-            latch.countDown();
-            return false;
-        }
-        String callTag = scenario.getFeature().getCallTag();
-        if (callTag != null) {
-            if (!tags.contains(callTag)) {
-                unit.logger.trace("skipping scenario at line: {} with call by tag effective: {}", scenario.getLine(), callTag);
-                latch.countDown();
-                return false;
-            }
-            unit.logger.info("scenario called at line: {} by tag: {}", scenario.getLine(), callTag);
-        }
-        return true;
+        return isSelected(exec.featureContext, unit.scenario, new Logger());
     }
 
-    public void run(ScenarioExecutionUnit unit) {
+    public static boolean isSelected(FeatureContext fc, Scenario scenario, Logger logger) {
+        Feature feature = fc.feature;
+        int callLine = feature.getCallLine();
+        if (callLine != -1) {
+            int sectionLine = scenario.getSection().getLine();
+            int scenarioLine = scenario.getLine();
+            if (callLine == sectionLine || callLine == scenarioLine) {
+                logger.info("found scenario at line: {}", callLine);
+                return true;
+            }
+            logger.trace("skipping scenario at line: {}, needed: {}", scenario.getLine(), callLine);
+            return false;
+        }
+        String callName = feature.getCallName();
+        if (callName != null) {
+            if (scenario.getName().matches(callName)) {
+                logger.info("found scenario at line: {} - {}", scenario.getLine(), callName);
+                return true;
+            }
+            logger.trace("skipping scenario at line: {} - {}, needed: {}", scenario.getLine(), scenario.getName(), callName);
+            return false;
+        }
+        Tags tags = scenario.getTagsEffective();
+        String callTag = scenario.getFeature().getCallTag();
+        if (callTag != null) {
+            if (tags.contains(callTag)) {
+                logger.info("scenario called at line: {} by tag: {}", scenario.getLine(), callTag);
+                return true;
+            }
+            logger.trace("skipping scenario at line: {} with call by tag effective: {}", scenario.getLine(), callTag);
+            return false;
+        }
+        if (tags.evaluate(fc.tagSelector)) {
+            logger.trace("matched scenario at line: {} with tags effective: {}", scenario.getLine(), tags.getTags());
+            return true;
+        }
+        logger.trace("skipping scenario at line: {} with tags effective: {}", scenario.getLine(), tags.getTags());
+        return false;
+    }
+
+    public boolean run(ScenarioExecutionUnit unit) {
         // this is an elegant solution to retaining the order of scenarios 
         // in the final report - even if they run in parallel !            
         results.add(unit.result);
         if (unit.result.isFailed()) { // can happen for dynamic scenario outlines with a failed background !
-            latch.countDown();
-            return;
-        }        
+            return false;
+        }
         Tags tags = unit.scenario.getTagsEffective();
         unit.setNext(() -> {
             latch.countDown();
@@ -152,6 +196,7 @@ public class FeatureExecutionUnit implements Runnable {
         } else {
             exec.scenarioExecutor.submit(unit);
         }
+        return true;
     }
 
 }

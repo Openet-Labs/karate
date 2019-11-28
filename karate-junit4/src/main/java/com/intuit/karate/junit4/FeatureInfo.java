@@ -24,16 +24,20 @@
 package com.intuit.karate.junit4;
 
 import com.intuit.karate.CallContext;
+import com.intuit.karate.Results;
 import com.intuit.karate.core.FeatureContext;
 import com.intuit.karate.core.ExecutionContext;
 import com.intuit.karate.core.ExecutionHook;
 import com.intuit.karate.core.Feature;
 import com.intuit.karate.core.FeatureExecutionUnit;
+import com.intuit.karate.core.FeatureResult;
 import com.intuit.karate.core.PerfEvent;
 import com.intuit.karate.core.Scenario;
 import com.intuit.karate.core.ScenarioContext;
 import com.intuit.karate.core.ScenarioExecutionUnit;
 import com.intuit.karate.core.ScenarioResult;
+import com.intuit.karate.core.Step;
+import com.intuit.karate.core.StepResult;
 import com.intuit.karate.http.HttpRequestBuilder;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
@@ -56,23 +60,18 @@ public class FeatureInfo implements ExecutionHook {
         this.notifier = notifier;
     }
 
-    private static String getFeatureName(Feature feature) {
-        return "[" + feature.getResource().getFileNameWithoutExtension() + "]";
-    }
-
     public static Description getScenarioDescription(Scenario scenario) {
-        String featureName = getFeatureName(scenario.getFeature());
-        return Description.createTestDescription(featureName, scenario.getDisplayMeta() + ' ' + scenario.getName());
+        return Description.createTestDescription(scenario.getFeature().getNameForReport(), scenario.getNameForReport());
     }
 
     public FeatureInfo(Feature feature, String tagSelector) {
         this.feature = feature;
-        description = Description.createSuiteDescription(getFeatureName(feature), feature.getResource().getPackageQualifiedName());
+        description = Description.createSuiteDescription(feature.getNameForReport(), feature.getResource().getPackageQualifiedName());
         FeatureContext featureContext = new FeatureContext(null, feature, tagSelector);
         CallContext callContext = new CallContext(null, true, this);
-        exec = new ExecutionContext(System.currentTimeMillis(), featureContext, callContext, null, null, null);
+        exec = new ExecutionContext(null, System.currentTimeMillis(), featureContext, callContext, null, null, null);
         unit = new FeatureExecutionUnit(exec);
-        unit.init(null);
+        unit.init();
         for (ScenarioExecutionUnit u : unit.getScenarioExecutionUnits()) {
             Description scenarioDescription = getScenarioDescription(u.scenario);
             description.addChild(scenarioDescription);
@@ -81,7 +80,8 @@ public class FeatureInfo implements ExecutionHook {
 
     @Override
     public boolean beforeScenario(Scenario scenario, ScenarioContext context) {
-        if (notifier == null) {
+        // if dynamic scenario outline background or a call
+        if (notifier == null || context.callDepth > 0) {
             return true;
         }
         notifier.fireTestStarted(getScenarioDescription(scenario));
@@ -90,18 +90,51 @@ public class FeatureInfo implements ExecutionHook {
 
     @Override
     public void afterScenario(ScenarioResult result, ScenarioContext context) {
-        if (notifier == null) { // dynamic scenario outline background
+        // if dynamic scenario outline background or a call
+        if (notifier == null || context.callDepth > 0) {
             return;
         }
         Description scenarioDescription = getScenarioDescription(result.getScenario());
         if (result.isFailed()) {
             notifier.fireTestFailure(new Failure(scenarioDescription, result.getError()));
-        } else {
-            notifier.fireTestFinished(scenarioDescription);
         }
+        // apparently this method should be always called
+        // even if fireTestFailure was called
+        notifier.fireTestFinished(scenarioDescription);
     }
 
     @Override
+    public boolean beforeFeature(Feature feature, ExecutionContext context) {
+        return true;
+    }
+
+    @Override
+    public void afterFeature(FeatureResult result, ExecutionContext context) {
+
+    }
+
+    @Override
+    public void beforeAll(Results results) {
+
+    }
+
+    @Override
+    public void afterAll(Results results) {
+
+    }
+
+    @Override
+    public boolean beforeStep(Step step, ScenarioContext context) {
+        return true;
+    }
+
+    @Override
+    public void afterStep(StepResult result, ScenarioContext context) {
+
+    }    
+    
+    @Override
+
     public String getPerfEventName(HttpRequestBuilder req, ScenarioContext context) {
         return null;
     }

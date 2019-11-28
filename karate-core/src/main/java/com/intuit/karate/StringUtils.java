@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -66,6 +68,16 @@ public class StringUtils {
         return new Pair(left, right);
     }
 
+    public static String truncate(String s, int length, boolean addDots) {
+        if (s == null) {
+            return EMPTY;
+        }
+        if (s.length() > length) {
+            return addDots ? s.substring(0, length) + " ..." : s.substring(0, length);
+        }
+        return s;
+    }    
+    
     public static String trimToEmpty(String s) {
         if (s == null) {
             return EMPTY;
@@ -193,6 +205,21 @@ public class StringUtils {
             }
         }
         return estimate;
+    }
+
+    private static final Pattern FUNCTION_PATTERN = Pattern.compile("^function[^(]*\\(");
+
+    public static boolean isJavaScriptFunction(String text) {
+        return FUNCTION_PATTERN.matcher(text).find();
+    }
+
+    public static String fixJavaScriptFunction(String text) {
+        Matcher matcher = FUNCTION_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return matcher.replaceFirst("function(");
+        } else {
+            return text;
+        }
     }
 
 }
