@@ -48,9 +48,9 @@ public class SafariWebDriver extends WebDriver {
         options.arg("--port=" + options.port);
         Command command = options.startProcess();
         String urlBase = "http://" + options.host + ":" + options.port;
-        Http http = Http.forUrl(options.driverLogger.getLogAppender(), urlBase);
+        Http http = Http.forUrl(options.driverLogger.getAppender(), urlBase);
         String sessionId = http.path("session")
-                .post("{ capabilities: { browserName: 'Safari' } }")
+                .post(options.getCapabilities())
                 .jsonPath("get[0] response..sessionId").asString();
         options.driverLogger.debug("init session id: {}", sessionId);
         http.url(urlBase + "/session/" + sessionId);

@@ -48,9 +48,11 @@ import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,6 +75,8 @@ public class DriverOptions {
     public final String type;
     public final int port;
     public final String host;
+    public final int pollAttempts;
+    public final int pollInterval;
     public final boolean headless;
     public final boolean showProcessLog;
     public final boolean showDriverLog;
@@ -87,6 +91,7 @@ public class DriverOptions {
     public final int maxPayloadSize;
     public final List<String> addOptions;
     public final List<String> args = new ArrayList();
+    public final Map<String, Object> proxy;
     public final Target target;
     public final String beforeStart;
     public final String afterStop;
@@ -139,7 +144,7 @@ public class DriverOptions {
         this.options = options;
         this.appender = appender;
         logger = new Logger(getClass());
-        logger.setLogAppender(appender);
+        logger.setAppender(appender);
         timeout = get("timeout", DEFAULT_TIMEOUT);
         type = get("type", null);
         start = get("start", true);
@@ -165,9 +170,12 @@ public class DriverOptions {
         maxPayloadSize = get("maxPayloadSize", 4194304);
         target = get("target", null);
         host = get("host", "localhost");
+        proxy = get("proxy", null);
         beforeStart = get("beforeStart", null);
         afterStop = get("afterStop", null);
         videoFile = get("videoFile", null);
+        pollAttempts = get("pollAttempts", 20);
+        pollInterval = get("pollInterval", 250);
         // do this last to ensure things like logger, start-flag and all are set
         port = resolvePort(defaultPort);
     }
@@ -199,7 +207,7 @@ public class DriverOptions {
             if (addOptions != null) {
                 args.addAll(addOptions);
             }
-            command = new Command(processLogger, uniqueName, processLogFile, workingDir, args.toArray(new String[]{}));
+            command = new Command(false, processLogger, uniqueName, processLogFile, workingDir, args.toArray(new String[]{}));
             command.start();
         }
         // try to wait for a slow booting browser / driver process
@@ -256,7 +264,36 @@ public class DriverOptions {
             throw new RuntimeException(message, e);
         }
     }
+    
+    private Map<String, Object> getCapabilities(String browserName) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("browserName", browserName);
+        if (proxy != null) {
+            map.put("proxy", proxy);
+        }
+        if (headless && browserName.equals("firefox")) {
+            map.put("moz:firefoxOptions",
+                    Collections.singletonMap("args", Collections.singletonList("-headless")));
+        }
+        map = Collections.singletonMap("alwaysMatch", map);
+        return Collections.singletonMap("capabilities", map);
+    }
 
+    public Map<String, Object> getCapabilities() {
+        switch (type) {
+            case "chromedriver":
+                return getCapabilities("chrome");
+            case "geckodriver":
+                return getCapabilities("firefox");
+            case "safaridriver":
+                return getCapabilities("safari");
+            case "mswebdriver":
+                return getCapabilities("edge");
+            default:
+                return null;
+        }
+    }
+    
     public static String preProcessWildCard(String locator) {
         boolean contains;
         String tag, prefix, text;
@@ -294,13 +331,16 @@ public class DriverOptions {
         if (!tag.startsWith("/")) {
             tag = "//" + tag;
         }
-        String suffix = index == 0 ? "" : "[" + index + "]";
+        String xpath;
         if (contains) {
-            return tag + "[contains(normalize-space(text()),'" + text + "')]" + suffix;
+            xpath = tag + "[contains(normalize-space(text()),'" + text + "')]";
         } else {
-            return tag + "[normalize-space(text())='" + text + "']" + suffix;
+            xpath = tag + "[normalize-space(text())='" + text + "']";
         }
-
+        if (index == 0) {
+            return xpath;
+        }
+        return "/(" + xpath + ")[" + index + "]";
     }
 
     public String selector(String locator) {
@@ -311,6 +351,9 @@ public class DriverOptions {
             locator = preProcessWildCard(locator);
         }
         if (locator.startsWith("/")) { // XPathResult.FIRST_ORDERED_NODE_TYPE = 9
+            if (locator.startsWith("/(")) {
+                locator = locator.substring(1); // hack for wildcard with index (see preProcessWildCard last line)
+            }
             return "document.evaluate(\"" + locator + "\", document, null, 9, null).singleNodeValue";
         }
         return "document.querySelector(\"" + locator + "\")";
@@ -461,9 +504,9 @@ public class DriverOptions {
                 sock.close();
                 return true;
             } catch (IOException e) {
-                sleep(250);
+                sleep(pollInterval);
             }
-        } while (attempts++ < 19);
+        } while (attempts++ < pollAttempts);
         return false;
     }
 

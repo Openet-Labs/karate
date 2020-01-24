@@ -26,9 +26,8 @@ package com.intuit.karate;
 import com.intuit.karate.driver.DockerTarget;
 import com.intuit.karate.driver.Target;
 import com.intuit.karate.http.HttpClient;
-
+import com.intuit.karate.http.HttpLogModifier;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +47,7 @@ public class Config {
     }
 
     public static final int DEFAULT_RETRY_INTERVAL = 3000;
-    public static final int DEFAULT_RETRY_COUNT = 3;    
+    public static final int DEFAULT_RETRY_COUNT = 3;
 
     private boolean sslEnabled = false;
     private String sslAlgorithm = "TLS";
@@ -77,6 +76,7 @@ public class Config {
     private boolean logPrettyResponse;
     private boolean printEnabled = true;
     private boolean outlineVariablesAuto = true;
+    private boolean abortedStepsShouldPass = false;
     private String clientClass;
     private HttpClient clientInstance;
     private Map<String, Object> userDefined;
@@ -84,6 +84,7 @@ public class Config {
     private Map<String, Object> driverOptions;
     private ScriptValue afterScenario = ScriptValue.NULL;
     private ScriptValue afterFeature = ScriptValue.NULL;
+    private HttpLogModifier logModifier;
 
     // retry config
     private int retryInterval = DEFAULT_RETRY_INTERVAL;
@@ -100,7 +101,7 @@ public class Config {
     public Config() {
         // zero arg constructor
     }
-    
+
     private static <T> T get(Map<String, Object> map, String key, T defaultValue) {
         Object o = map.get(key);
         return o == null ? defaultValue : (T) o;
@@ -171,11 +172,14 @@ public class Config {
                 if (value.isMapLike()) {
                     Map<String, Object> map = value.getAsMap();
                     retryInterval = get(map, "interval", retryInterval);
-                    retryCount = get(map, "count", retryCount);                    
+                    retryCount = get(map, "count", retryCount);
                 }
                 return false;
             case "outlineVariablesAuto":
                 outlineVariablesAuto = value.isBooleanTrue();
+                return false;
+            case "abortedStepsShouldPass":
+                abortedStepsShouldPass = value.isBooleanTrue();
                 return false;
             // here on the http client has to be re-constructed ================
             case "httpVersion":
@@ -186,6 +190,9 @@ public class Config {
                 return true;
             case "httpClientClass":
                 clientClass = value.getAsString();
+                return true;
+            case "logModifier":
+                logModifier = value.getValue(HttpLogModifier.class);
                 return true;
             case "httpClientInstance":
                 clientInstance = value.getValue(HttpClient.class);
@@ -289,15 +296,17 @@ public class Config {
         clientHttpVersion = parent.clientHttpVersion;
         mockServerFallbackHttpVersion = parent.mockServerFallbackHttpVersion;
         outlineVariablesAuto = parent.outlineVariablesAuto;
+        abortedStepsShouldPass = parent.abortedStepsShouldPass;
+        logModifier = parent.logModifier;
     }
-        
+
     public void setCookies(ScriptValue cookies) {
         this.cookies = cookies;
-    }   
-    
+    }
+
     public void setClientClass(String clientClass) {
         this.clientClass = clientClass;
-    }    
+    }
 
     //==========================================================================
     //
@@ -371,8 +380,8 @@ public class Config {
 
     public String getLocalAddress() {
         return localAddress;
-    }        
-    
+    }
+
     public ScriptValue getHeaders() {
         return headers;
     }
@@ -498,7 +507,11 @@ public class Config {
 
     public boolean isOutlineVariablesAuto() {
         return outlineVariablesAuto;
-    } 
+    }
+
+    public boolean isAbortedStepsShouldPass() {
+        return abortedStepsShouldPass;
+    }
 
     public Target getDriverTarget() {
         return driverTarget;
@@ -506,6 +519,10 @@ public class Config {
 
     public void setDriverTarget(Target driverTarget) {
         this.driverTarget = driverTarget;
-    }        
+    }
+
+    public HttpLogModifier getLogModifier() {
+        return logModifier;
+    }
 
 }

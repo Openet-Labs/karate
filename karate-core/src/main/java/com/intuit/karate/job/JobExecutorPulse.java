@@ -24,7 +24,6 @@
 package com.intuit.karate.job;
 
 import com.intuit.karate.Http;
-import com.intuit.karate.LogAppender;
 import java.util.Timer;
 import java.util.TimerTask;
 

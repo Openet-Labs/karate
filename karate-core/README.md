@@ -1,7 +1,7 @@
 # Karate UI
 ## UI Test Automation Made `Simple.`
 
-> 0.9.5.RC3 is available ! There will be no more API changes. 0.9.5 will be "production ready".
+> 0.9.5.RC5 is available ! There will be no more API changes. 0.9.5 will be "production ready".
 
 # Hello World
 
@@ -42,6 +42,7 @@
     | <a href="#retry">Retries</a>
     | <a href="#wait-api">Waits</a>
     | <a href="#distributed-testing">Distributed Testing</a>
+    | <a href="#proxy">Proxy</a>
   </td>
 </tr>
 <tr>
@@ -244,10 +245,13 @@ key | description
 `start` | default `true`, Karate will attempt to start the `executable` - and if the `executable` is not defined, Karate will even try to assume the default for the OS in use
 `port` | optional, and Karate would choose the "traditional" port for the given `type`
 `host` | optional, will default to `localhost` and you normally never need to change this
-`headless` | [headless mode](https://developers.google.com/web/updates/2017/04/headless-chrome) only applies to `{ type: 'chrome' }` for now, also see [`DockerTarget`](#dockertarget)
+`pollAttempts` | optional, will default to `20`, you normally never need to change this (and changing `pollInterval` is preferred), and this is the number of attempts Karate will make to wait for the `port` to be ready and accepting connections before proceeding
+`pollInterval` | optional, will default to `250` (milliseconds) and you normally never need to change this (see `pollAttempts`) unless the driver `executable` takes a *very* long time to start
+`headless` | [headless mode](https://developers.google.com/web/updates/2017/04/headless-chrome) only applies to `{ type: 'chrome' }` and `{ type: 'geckodriver' }` for now, also see [`DockerTarget`](#dockertarget)
 `showDriverLog` | default `false`, will include webdriver HTTP traffic in Karate report, useful for troubleshooting or bug reports
 `showProcessLog` | default `false`, will include even executable (webdriver or browser) logs in the Karate report
 `addOptions` | default `null`, has to be a list / JSON array that will be appended as additional CLI arguments to the `executable`, e.g. `['--no-sandbox', '--windows-size=1920,1080']`
+`proxy` | default `null`, this will be passed as-is to the underlying WebDriver executable - refer [the spec](https://www.w3.org/TR/webdriver/#proxy), and for `chrome` - see [proxy](#proxy)
 `beforeStart` | default `null`, an OS command that will be executed before commencing a `Scenario` (and before the `executable` is invoked if applicable) typically used to start video-recording
 `afterStart` | default `null`, an OS command that will be executed after a `Scenario` completes, typically used to stop video-recording and save the video file to an output folder
 `videoFile` | default `null`, the path to the video file that will be added to the end of the test report, if it does not exist, it will be ignored
@@ -350,6 +354,8 @@ To try this or especially when you need to investigate why a test is not behavin
 * if you omit the `--rm` part in the start command, after stopping the container, you can dump the logs and video recording using this command (here `.` stands for the current working folder, change it if needed):
   * `docker cp karate:/tmp .`
   * this would include the `stderr` and `stdout` logs from Chrome, which can be helpful for troubleshooting
+
+For more information on the Docker containers for Karate and how to use them, refer to the wiki: [Docker](https://github.com/intuit/karate/wiki/Docker).
 
 ## Driver Types
 type | default port | default executable | description
@@ -942,12 +948,18 @@ This is designed specifically for the kind of situation described in the example
 * assert exists('#someId').exists
 ```
 
+But the above is more elegantly expressed using [`locate()`](#locate):
+
+```cucumber
+* assert locate('#someId').exists
+```
+
 But what is most useful is how you can now *click only if element exists*. As you can imagine this can handle un-predictable dialogs, advertisements and the like.
 
 ```cucumber
 * exists('#elusiveButton').click()
 # or if you need to click something else
-* if (exists('#elusivePopup').exists) click('#elusiveButton')
+* if (locate('#elusivePopup').exists) click('#elusiveButton')
 ```
 
 And yes, you *can* use an [`if` statement in Karate](https://github.com/intuit/karate#conditional-logic) !
@@ -955,11 +967,19 @@ And yes, you *can* use an [`if` statement in Karate](https://github.com/intuit/k
 Note that the `exists()` API is a little different from the other `Element` actions, because it will *not* honor any intent to [`retry()`](#retry) and *immediately* check the HTML for the given locator. This is important because it is designed to answer the question: "*does the element exist in the HTML page __right now__ ?*"
 
 ## `waitUntil()`
-Wait for the JS expression to evaluate to `true`. Will poll using the [retry()](#retry) settings configured.
+Wait for the *browser* JS expression to evaluate to `true`. Will poll using the [retry()](#retry) settings configured.
 
 ```cucumber
 * waitUntil("document.readyState == 'complete'")
 ```
+
+Note that the JS here has to be a "raw" string that is simply sent to the browser as-is and evaluated there. This means that you cannot use any Karate JS objects or API-s such as `karate.get()` or `driver.title`. So trying to use `driver.title == 'My Page'` will *not* work, instead you have to do this:
+
+```cucumber
+* waitUntil("document.title == 'My Page'")
+```
+
+Also see [Karate vs the Browser](#karate-vs-the-browser).
 
 ### `waitUntil(locator,js)`
 A very useful variant that takes a [locator](#locators) parameter is where you supply a JavaScript "predicate" function that will be evaluated *on* the element returned  by the locator in the HTML DOM. Most of the time you will prefer the short-cut boolean-expression form that begins with an underscore (or "`!`"), and Karate will inject the JavaScript DOM element reference into a variable named "`_`".
@@ -994,7 +1014,7 @@ And waitUntil('#eg01WaitId', '!_.disabled')
 Also see [`waitForEnabled()`](#waitforenabled) which is the preferred short-cut for the last example above, also look at the examples for [chaining](#chaining) and then the section on [waits](#wait-api).
 
 ### `waitUntil(function)`
-A *very* powerful variation of `waitUntil()` takes a full-fledged JavaScript function as the argument. This can loop until *any* user-defined condition and can use any variable (or Karate or [Driver JS API](#syntax)) in scope. The signal to stop the loop is to return any not-null object. And as a convenience, whatever object is returned, can be re-used in future steps.
+A *very* powerful variation of [`waitUntil()`](#waituntil) takes a full-fledged JavaScript function as the argument. This can loop until *any* user-defined condition and can use any variable (or Karate or [Driver JS API](#syntax)) in scope. The signal to stop the loop is to return any not-null object. And as a convenience, whatever object is returned, can be re-used in future steps.
 
 This is best explained with an example. Note that [`scriptAll()`](#scriptall) will return an array, as opposed to [`script()`](#script).
 
@@ -1145,7 +1165,14 @@ Rarely used, but when you want to just instantiate an [`Element`](src/main/java/
 
 ```cucumber
 * def e = locate('{}Click Me')
+# now you can have multiple steps refer to "e"
 * if (e.exists) karate.call('some.feature')
+```
+
+It is also useful if you just want to check if an element is present - and this is a bit more elegant than using [`exists()`](#exists):
+
+```cucumber
+* if (locate('{}Click Me').exists) karate.call('some.feature')
 ```
 
 ## `locateAll()`
@@ -1404,6 +1431,19 @@ Only supported for driver type [`chrome`](#driver-types). See [Chrome Java API](
 
 ## `pdf()`
 Only supported for driver type [`chrome`](#driver-types). See [Chrome Java API](#chrome-java-api).
+
+# Proxy
+For driver type [`chrome`](#driver-types), you can use the `addOption` key to pass command-line options that [Chrome supports](https://www.linuxbabe.com/desktop-linux/configure-proxy-chromium-google-chrome-command-line):
+
+```cucumber
+* configure driver = { type: 'chrome', addOptions: [ '--proxy-server="https://somehost:5000"' ] }
+```
+
+For the WebDriver based [driver types](#driver-types) like `chromedriver`, `geckodriver` etc, you can use the [`proxy` key](#configure-driver):
+
+```cucumber
+* configure driver = { type: 'chromedriver', proxy: { proxyType: 'manual', httpProxy: 'somehost:5000' } }
+```
 
 # Appium
 ## Screen Recording

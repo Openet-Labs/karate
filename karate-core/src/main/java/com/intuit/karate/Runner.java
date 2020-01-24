@@ -253,15 +253,20 @@ public class Runner {
     private static void onFeatureDone(Results results, ExecutionContext execContext, String reportDir, int index, int count) {
         FeatureResult result = execContext.result;
         Feature feature = execContext.featureContext.feature;
-        if (result.getScenarioCount() > 0) { // possible that zero scenarios matched tags                   
-            File file = Engine.saveResultJson(reportDir, result, null);
-            if (result.getScenarioCount() < 500) {
-                // TODO this routine simply cannot handle that size
-                Engine.saveResultXml(reportDir, result, null);
+        if (result.getScenarioCount() > 0) { // possible that zero scenarios matched tags
+            try { // edge case that reports are not writable
+                File file = Engine.saveResultJson(reportDir, result, null);
+                if (result.getScenarioCount() < 500) {
+                    // TODO this routine simply cannot handle that size
+                    Engine.saveResultXml(reportDir, result, null);
+                }
+                String status = result.isFailed() ? "fail" : "pass";
+                LOGGER.info("<<{}>> feature {} of {}: {}", status, index, count, feature.getRelativePath());
+                result.printStats(file.getPath());
+            } catch (Exception e) {
+                LOGGER.error("<<error>> unable to write report file(s): {}", e.getMessage());
+                result.printStats(null);
             }
-            String status = result.isFailed() ? "fail" : "pass";
-            LOGGER.info("<<{}>> feature {} of {}: {}", status, index, count, feature.getRelativePath());
-            result.printStats(file.getPath());
         } else {
             results.addToSkipCount(1);
             if (LOGGER.isTraceEnabled()) {
@@ -381,9 +386,10 @@ public class Runner {
     }
 
     // this is called by karate-gatling !
-    public static void callAsync(String path, Map<String, Object> arg, ExecutionHook hook, Consumer<Runnable> system, Runnable next) {
+    public static void callAsync(String path, List<String> tags, Map<String, Object> arg, ExecutionHook hook, Consumer<Runnable> system, Runnable next) {
         Feature feature = FileUtils.parseFeatureAndCallTag(path);
-        FeatureContext featureContext = new FeatureContext(null, feature, null);
+        String tagSelector = Tags.fromKarateOptionsTags(tags);
+        FeatureContext featureContext = new FeatureContext(null, feature, tagSelector);
         CallContext callContext = CallContext.forAsync(feature, Collections.singletonList(hook), null, arg, true);
         ExecutionContext executionContext = new ExecutionContext(null, System.currentTimeMillis(), featureContext, callContext, null, system, null);
         FeatureExecutionUnit exec = new FeatureExecutionUnit(executionContext);

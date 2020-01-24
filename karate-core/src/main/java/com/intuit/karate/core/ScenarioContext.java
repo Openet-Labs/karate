@@ -57,6 +57,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import java.io.File;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,8 +73,10 @@ import java.util.function.Function;
  */
 public class ScenarioContext {
 
-    public final Logger logger;
-    public final LogAppender appender;
+    // public but mutable, just for dynamic scenario outline, see who calls setLogger()
+    public Logger logger;
+    public LogAppender appender;
+
     public final ScriptBindings bindings;
     public final int callDepth;
     public final boolean reuseParentContext;
@@ -127,6 +130,11 @@ public class ScenarioContext {
     // websocket    
     private List<WebSocketClient> webSocketClients;
 
+    public void setLogger(Logger logger) {
+        this.logger = logger;
+        this.appender = logger.getAppender();
+    }
+
     public void logLastPerfEvent(String failureMessage) {
         if (prevPerfEvent != null && executionHooks != null) {
             if (failureMessage != null) {
@@ -176,12 +184,16 @@ public class ScenarioContext {
         this.prevResponse = prevResponse;
     }
 
-    public HttpRequestBuilder getRequest() {
+    public HttpRequestBuilder getRequestBuilder() {
         return request;
     }
 
     public HttpRequest getPrevRequest() {
         return prevRequest;
+    }
+
+    public HttpResponse getPrevResponse() {
+        return prevResponse;
     }
 
     public HttpClient getHttpClient() {
@@ -261,7 +273,7 @@ public class ScenarioContext {
         if (appender == null) {
             appender = LogAppender.NO_OP;
         }
-        logger.setLogAppender(appender);
+        logger.setAppender(appender);
         this.appender = appender;
         callDepth = call.callDepth;
         reuseParentContext = call.reuseParentContext;
@@ -959,6 +971,30 @@ public class ScenarioContext {
         }
     }
 
+    public void robot(String expression) {
+        ScriptValue sv = Script.evalKarateExpression(expression, this);
+        Map<String, Object> config;
+        if (sv.isMapLike()) {
+            config = sv.getAsMap();
+        } else if (sv.isString()) {
+            config = Collections.singletonMap("app", sv.getAsString());
+        } else {
+            config = Collections.EMPTY_MAP;
+        }
+        Object robot;
+        try {
+            Class clazz = Class.forName("com.intuit.karate.robot.Robot");
+            Constructor constructor = clazz.getDeclaredConstructor(Map.class);
+            robot = constructor.newInstance(config);
+        } catch (Exception e) {
+            String message = "cannot instantiate robot, is 'karate-robot' included as a maven / gradle dependency ? - " + e.getMessage();
+            logger.error(message);
+            throw new RuntimeException(message, e);
+        }
+        bindings.putAdditionalVariable("robot", robot);
+        bindings.putAdditionalVariable("Key", Key.INSTANCE);
+    }
+
     public void stop(StepResult lastStepResult) {
         if (reuseParentContext) {
             if (driver != null) { // a called feature inited the driver
@@ -970,7 +1006,7 @@ public class ScenarioContext {
         if (webSocketClients != null) {
             webSocketClients.forEach(WebSocketClient::close);
         }
-        if (driver != null) {
+        if (callDepth == 0 && driver != null) {
             driver.quit();
             DriverOptions options = driver.getOptions();
             if (options.target != null) {

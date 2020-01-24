@@ -52,7 +52,7 @@
     </properties>
 
     <modules>
-        <module>karate-core</module>
+        <module>karate-core</module>        
         <module>karate-apache</module>
         <module>karate-apache-async</module>          
         <module>karate-junit4</module>
@@ -60,6 +60,7 @@
         <module>karate-netty</module>
         <module>karate-gatling</module>             
         <module>karate-demo</module>
+        <module>karate-robot</module>
         <module>karate-mock-servlet</module>
         <module>karate-jersey</module>    
         <module>karate-archetype</module>
