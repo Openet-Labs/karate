@@ -32,7 +32,6 @@ import com.intuit.karate.http.HttpRequest;
 import com.intuit.karate.http.HttpResponse;
 import org.apache.commons.io.IOUtils;
 import org.apache.hc.client5.http.async.methods.AbstractBinResponseConsumer;
-import org.apache.hc.client5.http.async.methods.AsyncRequestBuilder;
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.CredentialsStore;
@@ -55,6 +54,7 @@ import org.apache.hc.core5.http.*;
 import org.apache.hc.core5.http.nio.AsyncRequestProducer;
 import org.apache.hc.core5.http.nio.entity.BasicAsyncEntityProducer;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
+import org.apache.hc.core5.http.nio.support.AsyncRequestBuilder;
 import org.apache.hc.core5.http2.HttpVersionPolicy;
 import org.apache.hc.core5.io.CloseMode;
 import org.apache.hc.core5.net.URIBuilder;
@@ -132,7 +132,7 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
         if (config.getProxyUri() != null) {
             try {
                 URI proxyUri = new URIBuilder(config.getProxyUri()).build();
-                clientBuilder.setProxy(new HttpHost(proxyUri.getHost(), proxyUri.getPort(), proxyUri.getScheme()));
+                clientBuilder.setProxy(new HttpHost(proxyUri.getScheme(), proxyUri.getHost(), proxyUri.getPort()));
                 if (config.getProxyUsername() != null && config.getProxyPassword() != null) {
                     CredentialsStore credsStore = new BasicCredentialsProvider();
                     credsStore.setCredentials(
@@ -327,9 +327,7 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
         }
         clientBuilder.setVersionPolicy(httpVersionPolicy);
         CloseableHttpAsyncClient client = clientBuilder.build();
-        
-        byte[] bytes;
-        SimpleHttpResponse httpResponse = null;
+
         AbstractBinResponseConsumer<SimpleHttpResponse> binResponseConsumer = new AbstractBinResponseConsumer<SimpleHttpResponse>() {
             SimpleHttpResponse httpResponse;
             // TODO: further test buffer size implications
@@ -342,11 +340,6 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
             @Override
             protected SimpleHttpResponse buildResult() {
                 httpResponse.setBodyBytes(toByteArray(), httpResponse.getContentType());
-                return httpResponse;
-            }
-
-            @Override
-            public SimpleHttpResponse getResult() {
                 return httpResponse;
             }
 
@@ -372,44 +365,29 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
 
             @Override
             protected int capacityIncrement() {
-                return remainingCapacity();
-            }
-
-            @Override
-            protected int remainingCapacity() {
-                return bodyBuffer.remaining();
+            	return bodyBuffer.remaining();
             }
 
         };
 
+        SimpleHttpResponse simpleHttpResponse;
         Future<SimpleHttpResponse> future;
         try {
             client.start();
-            future =  client.execute(requestProducer, binResponseConsumer, new FutureCallback<SimpleHttpResponse>() {
+            future = client.execute(requestProducer, binResponseConsumer, new FutureCallback<SimpleHttpResponse>() {
                         @Override
                         public void completed(SimpleHttpResponse simpleHttpResponse) {
-
                         }
 
                         @Override
                         public void failed(Exception e) {
-
                         }
 
                         @Override
                         public void cancelled() {
-
                         }
                     });
-            future.get();
-
-            if(binResponseConsumer == null || binResponseConsumer.getResult() == null) {
-                bytes = new byte[0];
-            }else {
-                httpResponse = binResponseConsumer.getResult();
-                InputStream is = new ByteArrayInputStream(httpResponse.getBodyBytes());
-                bytes = FileUtils.toBytes(is);
-            }
+            simpleHttpResponse = future.get();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -417,9 +395,12 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
 
         HttpRequest actualRequest = context.getPrevRequest();
         HttpResponse response = new HttpResponse(actualRequest.getStartTime(), actualRequest.getEndTime());
+    	response.setBody(FileUtils.toBytes(new ByteArrayInputStream(simpleHttpResponse.getBodyBytes())));
+        response.setStatus(simpleHttpResponse.getCode());
+        for (Header header : simpleHttpResponse.getHeaders()) {
+            response.addHeader(header.getName(), header.getValue());
+        }
         response.setUri(getRequestUri());
-        response.setBody(bytes);
-        response.setStatus(httpResponse.getCode());
         for (Cookie c : cookieStore.getCookies()) {
             com.intuit.karate.http.Cookie cookie = new com.intuit.karate.http.Cookie(c.getName(), c.getValue());
             cookie.put(DOMAIN, c.getDomain());
@@ -432,10 +413,7 @@ public class ApacheHttpAsyncClient extends HttpClient<HttpEntity> {
             response.addCookie(cookie);
         }
         cookieStore.clear(); // we rely on the StepDefs for cookie 'persistence'
-        for (Header header : httpResponse.getHeaders()) {
-            response.addHeader(header.getName(), header.getValue());
-        }
-        client.shutdown(CloseMode.GRACEFUL);
+        
         return response;
     }
 

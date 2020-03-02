@@ -23,13 +23,11 @@
  */
 package com.intuit.karate.http.apache;
 
-import org.apache.hc.client5.http.cookie.CookieSpecProvider;
+import org.apache.hc.client5.http.cookie.CookieSpecFactory;
 import org.apache.hc.client5.http.impl.cookie.RFC6265LaxSpec;
 import org.apache.hc.core5.http.config.Registry;
 import org.apache.hc.core5.http.config.RegistryBuilder;
 import org.apache.hc.core5.http.protocol.HttpContext;
-
-
 
 /**
  *
@@ -39,11 +37,10 @@ public class LenientCookieSpec extends RFC6265LaxSpec {
     
     public static String KARATE = "karate";
 
-
-    public static Registry<CookieSpecProvider> registry() {
-        CookieSpecProvider specProvider = (HttpContext hc) -> new LenientCookieSpec();
-        return RegistryBuilder.<CookieSpecProvider>create()
-                .register(KARATE, specProvider).build();
+    public static Registry<CookieSpecFactory> registry() {
+    	CookieSpecFactory specFactory = (HttpContext hc) -> new LenientCookieSpec();
+        return RegistryBuilder.<CookieSpecFactory>create()
+                .register(KARATE, specFactory).build();
     }
 
 }

@@ -64,7 +64,7 @@ public class LoggingUtils {
     }
     
     public static void logHeaders(StringBuilder sb, int id, char prefix, org.apache.hc.core5.http.HttpRequest request, HttpRequest actual) {
-        for (String key : sortKeys(request.getAllHeaders())) {
+        for (String key : sortKeys(request.getHeaders())) {
             Header[] headers = request.getHeaders(key);
             logHeaderLine(sb, id, prefix, key, headers);
             for (Header header : headers) {
@@ -74,7 +74,7 @@ public class LoggingUtils {
     }
     
     public static void logHeaders(StringBuilder sb, int id, char prefix, HttpResponse response) {
-        for (String key : sortKeys(response.getAllHeaders())) {
+        for (String key : sortKeys(response.getHeaders())) {
             Header[] headers = response.getHeaders(key);
             logHeaderLine(sb, id, prefix, key, headers);
         }

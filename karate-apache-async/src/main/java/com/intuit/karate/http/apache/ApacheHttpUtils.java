@@ -105,10 +105,8 @@ public class ApacheHttpUtils {
         try {
             ContentType ct = getContentType(mediaType, charset);
             if (ct == null) { // "bad" value such as an empty string
-                StringEntity entity = new StringEntity(value);
-                entity.setContentType(mediaType);
-                return entity;
-            } else {
+                return new StringEntity(value);
+          } else {
                 return new StringEntity(value, ct);
             }            
         } catch (Exception e) {

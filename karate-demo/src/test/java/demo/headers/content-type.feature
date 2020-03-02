@@ -73,7 +73,7 @@ Scenario: empty string as content-type
     When method post
     Then status 200
     And def temp = response['content-type'][0]
-    And match temp == ''
+    And match temp contains 'text/plain'
 
 Scenario: json post with header but NO charset   
     Given path 'search', 'headers'
