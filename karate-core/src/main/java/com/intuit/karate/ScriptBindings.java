@@ -49,8 +49,24 @@ import javax.script.ScriptEngineManager;
  */
 public class ScriptBindings implements Bindings {
 
+    private static final String SCRIPT_ENGINE_NAME = "nashorn";
+
     // all threads will share this ! thread isolation is via Bindings (this class)
-    private static final ScriptEngine NASHORN = new ScriptEngineManager(null).getEngineByName("nashorn");
+    private static final ScriptEngine NASHORN;
+
+    static {
+        // Check using the extensions/platform classloader first for Nashorn engine
+        ScriptEngine scriptEngine = new ScriptEngineManager(null).getEngineByName(SCRIPT_ENGINE_NAME);
+        if (scriptEngine == null) {
+            // For Java 17, nashorn-core will be available in the application classloader, as not part of JDK
+            scriptEngine = new ScriptEngineManager().getEngineByName(SCRIPT_ENGINE_NAME);
+
+            if (scriptEngine == null) {
+                throw new RuntimeException(SCRIPT_ENGINE_NAME + " script engine not found");
+            }
+        }
+        NASHORN = scriptEngine;
+    }
     
     protected final ScriptBridge bridge;
 
