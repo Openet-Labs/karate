@@ -118,7 +118,37 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>                   
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven.shade.version}</version>
+                <executions>
+                    <execution>
+                        <id>relocate-nashorn</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>openjdk-nashorn</shadedClassifierName>
+                            <artifactSet>
+                                <includes>
+                                    <include>${project.groupId}:${project.artifactId}</include>
+                                </includes>
+                            </artifactSet>
+                            <!-- Relocate Nashorn imports to be compatible with OpenJDK Nashorn -->
+                            <relocations>
+                                <relocation>
+                                    <pattern>jdk.nashorn</pattern>
+                                    <shadedPattern>org.openjdk.nashorn</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>                 
         </plugins>               
     </build>
     
